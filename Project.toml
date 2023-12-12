@@ -1,0 +1,7 @@
+name = "CurrentDensityImaging"
+uuid = "f3ac5e16-41a9-4b3d-bcfc-1fbed62a2adc"
+authors = ["MrP01 <peter@waldert.at>"]
+version = "0.1.0"
+
+[deps]
+KomaMRI = "6a340f8b-2cdf-4c04-99be-4953d9b66d0a"
