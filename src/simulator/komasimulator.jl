@@ -4,13 +4,14 @@ import Lazy
 import GLMakie
 import LinearAlgebra
 import FastTransforms: fft, ifft
+import CurrentDensityImaging.GridPhantom as GP
 
-@kwdef struct CurrentDensityPhantom{T<:Real}
-  p::KomaMRI.Phantom{T}
+@kwdef struct CurrentDensityPhantom
+  pog::GP.GridPhantom  # phantom on grid
   # j::Vector{Vector{T}} = zeros(size(p.x), 3)
-  jx::AbstractVector{T} = ones(size(p.x))
-  jy::AbstractVector{T} = zeros(size(p.x))
-  jz::AbstractVector{T} = zeros(size(p.x))
+  jx::Array{Float64,3} = ones(size(pog.x))
+  jy::Array{Float64,3} = zeros(size(pog.x))
+  jz::Array{Float64,3} = zeros(size(pog.x))
 end
 
 Lazy.@forward CurrentDensityPhantom.p KomaMRI.plot_phantom_map
