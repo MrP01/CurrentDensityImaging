@@ -32,6 +32,9 @@ function calculate_magnetic_field(cdp::CurrentDensityPhantom)
   k1 = fftfreq(N)
   k = hcat(k1, k1, k1)
 
+  jx_interp = Interpolations.interpolate()
+  jx_on_grid = itp()
+
   B1::Vector{Float64} = mu_0 * ifft(fft(cdp.jy) * g3.(k) - fft(cdp.jz) * g2.(k))
   B2::Vector{Float64} = -mu_0 * ifft(fft(cdp.jx) * g3.(k) - fft(cdp.jz) * g1.(k))
   B3::Vector{Float64} = mu_0 * ifft(fft(cdp.jx) * g2.(k) - fft(cdp.jy) * g1.(k))
