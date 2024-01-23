@@ -34,3 +34,4 @@ stuff/
 .vscode/
 *.protected.pdf
 report/tikz/
+presentation/
