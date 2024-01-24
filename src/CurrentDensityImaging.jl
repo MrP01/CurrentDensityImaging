@@ -1,24 +1,22 @@
-module CurrentDensityImaging
-include("gridphantom.jl")
-
+module CDI
 import KomaMRI
 import Lazy
 import LinearAlgebra
 import FastTransforms: fft, ifft
-import .GridPhantom as GP
 import GLMakie
+include("./grid.jl")
 
 @kwdef struct CurrentDensityPhantom
-  pog::GP.PhantomOnAGrid  # phantom on grid
+  pog::grid.PhantomOnAGrid  # phantom on grid
   jx::Array{Float64,3} = ones(size(pog.ρ))
   jy::Array{Float64,3} = zeros(size(pog.ρ))
   jz::Array{Float64,3} = zeros(size(pog.ρ))
 end
 
-Lazy.@forward CurrentDensityPhantom.p KomaMRI.plot_phantom_map
+Lazy.@forward CurrentDensityPhantom.pog KomaMRI.plot_phantom_map
 
 function plot_current_density(cdp::CurrentDensityPhantom)
-  flat = GP.to_flat_phantom(cdp.pog)
+  flat = grid.to_flat_phantom(cdp.pog)
   mask = cdp.pog.ρ .!= 0
   GLMakie.arrows(flat.x, flat.y, flat.z, cdp.jx[mask], cdp.jy[mask], cdp.jz[mask], axis=(type=Axis3,))
 end

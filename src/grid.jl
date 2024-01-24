@@ -1,4 +1,4 @@
-module GridPhantom
+module grid
 import KomaMRI
 import HDF5
 
@@ -11,6 +11,10 @@ import HDF5
   Δw::Array{Float64,3}
   Δx::Vector{Float64}
   offset::Vector{Float64}
+end
+
+function KomaMRI.plot_phantom_map(pog::PhantomOnAGrid, key::Symbol)
+  KomaMRI.plot_phantom_map(to_flat_phantom(pog), key)
 end
 
 function read_grid_phantom_jemris(filename::String)
@@ -56,4 +60,6 @@ function to_flat_phantom(pog::PhantomOnAGrid)
     Δw=pog.Δw[mask],
   )
 end
+
+export PhantomOnAGrid, to_flat_phantom
 end
