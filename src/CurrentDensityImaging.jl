@@ -13,12 +13,19 @@ include("./grid.jl")
   jz::Array{Float64,3} = zeros(size(pog.ρ))
 end
 
+function generateDemoCDP(shape=(4, 4, 3))::CurrentDensityPhantom
+  sero = zeros(shape)
+  pog = grid.PhantomOnAGrid(name="demo phantom!", ρ=ones(shape), T1=sero, T2=sero, T2s=sero, Δw=sero, Δx=vec([0.001, 0.001, 0.001]), offset=vec([0, 0, 0]))
+  return CurrentDensityPhantom(pog, pog.ρ / 4000, pog.ρ / 4000, pog.ρ / 4000)
+end
+
 Lazy.@forward CurrentDensityPhantom.pog KomaMRI.plot_phantom_map
 
 function plot_current_density(cdp::CurrentDensityPhantom)
   flat = grid.to_flat_phantom(cdp.pog)
   mask = cdp.pog.ρ .!= 0
-  GLMakie.arrows(flat.x, flat.y, flat.z, cdp.jx[mask], cdp.jy[mask], cdp.jz[mask], axis=(type=Axis3,))
+  GLMakie.arrows(flat.x, flat.y, flat.z, cdp.jx[mask], cdp.jy[mask], cdp.jz[mask], axis=(type=GLMakie.Axis3,),
+    arrowsize=0.0001, linewidth=0.00005, arrowcolor=cdp.jx[mask], linecolor=cdp.jx[mask])
 end
 
 function calculate_magnetic_field(cdp::CurrentDensityPhantom)
