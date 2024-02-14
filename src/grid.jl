@@ -32,15 +32,18 @@ function read_grid_phantom_jemris(filename::String)
   )
 end
 
-function to_flat_phantom(pog::PhantomOnAGrid)
-  mask = pog.ρ .!= 0
-
-  # Positions
+function get_FOV(pog::PhantomOnAGrid)
   X, Y, Z = size(pog.ρ)
   FOVx = (X - 1) * pog.Δx[1] # [m]
   FOVy = (Y - 1) * pog.Δx[2] # [m]
   FOVz = (Z - 1) * pog.Δx[3] # [m]
+  return FOVx, FOVy, FOVz
+end
 
+function to_flat_phantom(pog::PhantomOnAGrid)
+  mask = pog.ρ .!= 0
+
+  FOVx, FOVy, FOVz = get_FOV(pog)
   xx = reshape((-FOVx/2:pog.Δx[1]:FOVx/2), :, 1, 1)  #[(-FOVx/2:Δx[1]:FOVx/2)...;]
   yy = reshape((-FOVy/2:pog.Δx[2]:FOVy/2), 1, :, 1)  #[(-FOVy/2:Δx[2]:FOVy/2)...;;]
   zz = reshape((-FOVz/2:pog.Δx[3]:FOVz/2), 1, 1, :)  #[(-FOVz/2:Δx[3]:FOVz/2)...;;;]

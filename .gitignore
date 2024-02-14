@@ -35,3 +35,4 @@ stuff/
 *.protected.pdf
 report/tikz/
 presentation/
+*.todo
