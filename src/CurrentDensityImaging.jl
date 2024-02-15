@@ -77,9 +77,9 @@ function calculate_magnetic_field(cdp::CurrentDensityPhantom)
   g3[1] = 0
 
   c1, c2, c3 = curl(fft(cdp.jx), fft(cdp.jy), fft(cdp.jz), g1, g2, g3)
-  B1::Array{Float64,3} = imag(ifft(c1))
-  B2::Array{Float64,3} = imag(ifft(c2))
-  B3::Array{Float64,3} = imag(ifft(c3))
+  B1::Array{Float64,3} = real(ifft(c1))
+  B2::Array{Float64,3} = real(ifft(c2))
+  B3::Array{Float64,3} = real(ifft(c3))
   return mu_0 .* (B1, B2, B3)
 end
 
