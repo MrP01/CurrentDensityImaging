@@ -7,6 +7,8 @@ import GLMakie
 import Optim
 include("./grid.jl")
 
+const VectorField = Tuple{Array{Float64,3},Array{Float64,3},Array{Float64,3}}
+
 @kwdef struct CurrentDensityPhantom
   pog::grid.PhantomOnAGrid  # phantom on grid
   jx::Array{Float64,3} = ones(size(pog.ρ))
@@ -14,16 +16,16 @@ include("./grid.jl")
   jz::Array{Float64,3} = zeros(size(pog.ρ))
 end
 
-roundToInt(x) = Int32(round(x))
+rtoi(x) = Int32(round(x))
 
 function convertToDemoCDP(pog::grid.PhantomOnAGrid)::CurrentDensityPhantom
   shape = size(pog.ρ)
   jz = zeros(shape)
-  # jz[roundToInt(shape[1] / 3):roundToInt(shape[1] * 2 / 3), roundToInt(shape[2] / 3):roundToInt(shape[2] * 2 / 3), :] .= 1 / 4000
-  jz[4, 4, :] .= 1 / 4000
+  jz[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= 1 / 4000
+  # jz[4, 4, :] .= 1 / 2000
   return CurrentDensityPhantom(pog, zeros(size(pog.ρ)), zeros(size(pog.ρ)), jz)
 end
-function generateDemoCDP(shape=(8, 8, 8))::CurrentDensityPhantom
+function generateDemoCDP(shape=(8, 8, 4))::CurrentDensityPhantom
   sero = zeros(shape)
   pog = grid.PhantomOnAGrid(name="demo phantom!", ρ=ones(shape), T1=sero, T2=sero, T2s=sero, Δw=sero, Δx=vec([0.001, 0.001, 0.001]), offset=vec([0, 0, 0]))
   return convertToDemoCDP(pog)
@@ -51,11 +53,18 @@ function curl(a1, a2, a3, b1, b2, b3)
   )
 end
 
-function calculate_magnetic_field(cdp::CurrentDensityPhantom)
+function calculate_magnetic_field(cdp::CurrentDensityPhantom)::VectorField
   mu_0 = 12.0
 
-  s = max(grid.get_FOV(cdp.pog)...)
-  N = size(cdp.pog.ρ, 1)
+  # s = max(grid.get_FOV(cdp.pog)...)
+  Mx, My, Mz = size(cdp.pog.ρ)
+  Mx_half, My_half, Mz_half = rtoi(Mx / 2), rtoi(My / 2), rtoi(Mz / 2)
+  N = 2 * max(Mx, My, Mz)
+  center = rtoi(N / 2)
+  Mx_range = center-Mx_half:center+Mx_half-iseven(Mx)
+  My_range = center-My_half:center+My_half-iseven(My)
+  Mz_range = center-Mz_half:center+Mz_half-iseven(Mz)
+  M_range = Mx_range, My_range, Mz_range
 
   k1 = fftfreq(N)
   g1 = zeros(ComplexF64, (N, N, N))
@@ -76,11 +85,16 @@ function calculate_magnetic_field(cdp::CurrentDensityPhantom)
   g2[1] = 0
   g3[1] = 0
 
-  c1, c2, c3 = curl(fft(cdp.jx), fft(cdp.jy), fft(cdp.jz), g1, g2, g3)
-  B1::Array{Float64,3} = real(ifft(c1))
-  B2::Array{Float64,3} = real(ifft(c2))
-  B3::Array{Float64,3} = real(ifft(c3))
-  return mu_0 .* (B1, B2, B3)
+  padded_jx = zeros(Float64, (N, N, N))
+  padded_jy = zeros(Float64, (N, N, N))
+  padded_jz = zeros(Float64, (N, N, N))
+  padded_jx[M_range...] = cdp.jx
+  padded_jy[M_range...] = cdp.jy
+  padded_jz[M_range...] = cdp.jz
+
+  c1, c2, c3 = curl(fft(padded_jx), fft(padded_jy), fft(padded_jz), g1, g2, g3)
+  B1, B2, B3 = real(ifft(c1)), real(ifft(c2)), real(ifft(c3))
+  return mu_0 .* (B1[M_range...], B2[M_range...], B3[M_range...])
 end
 
 function plot_magnetic_field(cdp::CurrentDensityPhantom)
