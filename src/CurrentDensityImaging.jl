@@ -7,6 +7,7 @@ import GLMakie
 import Optim
 include("./grid.jl")
 
+const μ_0 = 12.0
 const VectorField = Tuple{Array{Float64,3},Array{Float64,3},Array{Float64,3}}
 
 @kwdef struct CurrentDensityPhantom
@@ -54,8 +55,6 @@ function curl(a1, a2, a3, b1, b2, b3)
 end
 
 function calculate_magnetic_field(cdp::CurrentDensityPhantom)::VectorField
-  mu_0 = 12.0
-
   # s = max(grid.get_FOV(cdp.pog)...)
   Mx, My, Mz = size(cdp.pog.ρ)
   Mx_half, My_half, Mz_half = rtoi(Mx / 2), rtoi(My / 2), rtoi(Mz / 2)
@@ -94,7 +93,7 @@ function calculate_magnetic_field(cdp::CurrentDensityPhantom)::VectorField
 
   c1, c2, c3 = curl(fft(padded_jx), fft(padded_jy), fft(padded_jz), g1, g2, g3)
   B1, B2, B3 = real(ifft(c1)), real(ifft(c2)), real(ifft(c3))
-  return mu_0 .* (B1[M_range...], B2[M_range...], B3[M_range...])
+  return μ_0 .* (B1[M_range...], B2[M_range...], B3[M_range...])
 end
 
 function plot_magnetic_field(cdp::CurrentDensityPhantom)
@@ -106,10 +105,43 @@ function plot_magnetic_field(cdp::CurrentDensityPhantom)
     arrowsize=0.0001, linewidth=0.00005, arrowcolor=colour_indicator, linecolor=colour_indicator)
 end
 
+function to_flat(B1, B2, B3, σ; B_flat_size)::Vector{Float64}
+  return [
+    reshape(B1, (B_flat_size,))...,  # Bx
+    reshape(B2, (B_flat_size,))...,  # By
+    reshape(B3, (B_flat_size,))...,  # Bz
+    reshape(σ, (B_flat_size,))...  # σ
+  ]  # all B-field values in flat, along with sigma
+end
+
+function from_flat(x::Vector{Float64}; B_shape, B_flat_size)
+  return (
+    reshape(x[1:B_flat_size], B_shape),  # Bx
+    reshape(x[B_flat_size+1:2*B_flat_size], B_shape),  # By
+    reshape(x[2*B_flat_size+1:3*B_flat_size], B_shape),  # Bz
+    reshape(x[3*B_flat_size+1:4*B_flat_size], B_shape)  # σ
+  )
+end
+
+function find_matching_B(Bz0::Array{Float64,3})
+  B_shape = size(Bz0)
+  B_flat_size = prod(B_shape)
+  x0 = to_flat(ones(B_shape), zeros(B_shape), zeros(B_shape), ones(B_shape); B_flat_size)
+  function f(x::Vector{Float64})
+    Bx, By, Bz, σ = from_flat(x; B_shape, B_flat_size)
+    # return LinearAlgebra.norm(Bz - Bz0) .^ 2 / 2 + alpha / 2 * LinearAlgebra.norm(B) / σ + R(σ)
+    return LinearAlgebra.norm(Bz - Bz0) .^ 2 / 2
+  end
+  result = Optim.optimize(f, x0, Optim.LBFGS())
+  return result
+end
+
 function solve(Bz0::Array{Float64,3})::CurrentDensityPhantom
-  f(x) = LinearAlgebra.norm(Bz - Bz0) .^ 2 / 2 + alpha / 2 * LinearAlgebra.norm(B) / σ + R(σ)
-  x0 = []  # all B-field values in flat, along with sigma
-  Optim.optimize(f, x0, Optim.LBFGS())
+  B_result = find_matching_B(Bz0)
+  @show B_result
+  B1, B2, B3, σ = CDI.from_flat(result.minimizer; B_shape, B_flat_size)
+  jx, jy, jz = rot(B1, B2, B3) / μ_0
+  return CurrentDensityPhantom()
 end
 
 greet() = print("Hello World!")
