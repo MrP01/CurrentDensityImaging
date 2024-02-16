@@ -5,6 +5,7 @@ version = "0.1.0"
 
 [deps]
 FastTransforms = "057dd010-8810-581a-b7be-e3fc3b93f78c"
+FiniteDifferences = "26cc04aa-876d-5657-8c51-4c34ba976000"
 FromFile = "ff7dd447-1dcb-4ce3-b8ac-22a812192de7"
 GLMakie = "e9467ef8-e4e7-5192-8a1a-b1aee30e663a"
 HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"

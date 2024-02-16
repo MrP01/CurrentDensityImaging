@@ -46,7 +46,7 @@ function plot_current_density(cdp::CurrentDensityPhantom)
     arrowsize=0.0002, linewidth=0.00005, arrowcolor=colour_indicator, linecolor=colour_indicator)
 end
 
-function curl(a1, a2, a3, b1, b2, b3)
+function cross(a1, a2, a3, b1, b2, b3)
   return (
     a2 .* b3 - a3 .* b2,
     -(a1 .* b3 - a3 .* b1),
@@ -91,7 +91,7 @@ function calculate_magnetic_field(cdp::CurrentDensityPhantom)::VectorField
   padded_jy[M_range...] = cdp.jy
   padded_jz[M_range...] = cdp.jz
 
-  c1, c2, c3 = curl(fft(padded_jx), fft(padded_jy), fft(padded_jz), g1, g2, g3)
+  c1, c2, c3 = cross(fft(padded_jx), fft(padded_jy), fft(padded_jz), g1, g2, g3)
   B1, B2, B3 = real(ifft(c1)), real(ifft(c2)), real(ifft(c3))
   return μ_0 .* (B1[M_range...], B2[M_range...], B3[M_range...])
 end
@@ -129,8 +129,12 @@ function find_matching_B(Bz0::Array{Float64,3})
   x0 = to_flat(ones(B_shape), zeros(B_shape), zeros(B_shape), ones(B_shape); B_flat_size)
   function f(x::Vector{Float64})
     Bx, By, Bz, σ = from_flat(x; B_shape, B_flat_size)
-    # return LinearAlgebra.norm(Bz - Bz0) .^ 2 / 2 + alpha / 2 * LinearAlgebra.norm(B) / σ + R(σ)
-    return LinearAlgebra.norm(Bz - Bz0) .^ 2 / 2
+    # divergence = diff(Bx, dims=1) + diff(By, dims=2) + diff(Bz, dims=3)  # TODO: must match dimensions
+    divergence_penalty = LinearAlgebra.norm(diff(Bx, dims=1)) +
+                         LinearAlgebra.norm(diff(By, dims=2)) +
+                         LinearAlgebra.norm(diff(Bz, dims=3))  # this is not really the divergence
+    # return LinearAlgebra.norm(Bz - Bz0) .^ 2 / 2 + alpha / 2 * LinearAlgebra.norm(curl(B)) / σ + R(σ)
+    return LinearAlgebra.norm(Bz - Bz0) .^ 2 / 2 + divergence_penalty^2
   end
   result = Optim.optimize(f, x0, Optim.LBFGS())
   return result
@@ -140,7 +144,7 @@ function solve(Bz0::Array{Float64,3})::CurrentDensityPhantom
   B_result = find_matching_B(Bz0)
   @show B_result
   B1, B2, B3, σ = CDI.from_flat(result.minimizer; B_shape, B_flat_size)
-  jx, jy, jz = rot(B1, B2, B3) / μ_0
+  jx, jy, jz = curl(B1, B2, B3) / μ_0
   return CurrentDensityPhantom()
 end
 
