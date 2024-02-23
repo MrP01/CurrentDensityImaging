@@ -4,6 +4,7 @@ import Lazy
 import LinearAlgebra
 import FastTransforms: fft, ifft, fftfreq
 import GLMakie
+import CairoMakie
 import Optim
 include("./grid.jl")
 
@@ -38,12 +39,15 @@ function loadBrainCDP()::CurrentDensityPhantom
 end
 
 Lazy.@forward CurrentDensityPhantom.pog KomaMRI.plot_phantom_map
-function plot_current_density(cdp::CurrentDensityPhantom)
+function plot_current_density(cdp::CurrentDensityPhantom; backend=GLMakie)
   flat = grid.to_flat_phantom(cdp.pog)
   mask = cdp.pog.ρ .!= 0
   colour_indicator = sum([cdp.jx[mask] .^ 2, cdp.jy[mask] .^ 2, cdp.jz[mask] .^ 2])
-  GLMakie.arrows(flat.x, flat.y, flat.z, cdp.jx[mask], cdp.jy[mask], cdp.jz[mask], axis=(type=GLMakie.Axis3,),
+  fig = backend.Figure()
+  ax = backend.Axis3(fig[1, 1])
+  backend.arrows!(flat.x, flat.y, flat.z, cdp.jx[mask], cdp.jy[mask], cdp.jz[mask],
     arrowsize=0.0002, linewidth=0.00005, arrowcolor=colour_indicator, linecolor=colour_indicator)
+  return fig
 end
 
 function cross(a1, a2, a3, b1, b2, b3)
@@ -96,13 +100,16 @@ function calculate_magnetic_field(cdp::CurrentDensityPhantom)::VectorField
   return μ_0 .* (B1[M_range...], B2[M_range...], B3[M_range...])
 end
 
-function plot_magnetic_field(cdp::CurrentDensityPhantom)
+function plot_magnetic_field(cdp::CurrentDensityPhantom; backend=GLMakie)
   flat = grid.to_flat_phantom(cdp.pog)
   mask = cdp.pog.ρ .!= 0
   B1, B2, B3 = calculate_magnetic_field(cdp)
   colour_indicator = sum([B1[mask] .^ 2, B2[mask] .^ 2, B3[mask] .^ 2])
-  GLMakie.arrows(flat.x, flat.y, flat.z, B1[mask], B2[mask], B3[mask], axis=(type=GLMakie.Axis3,),
+  fig = backend.Figure()
+  ax = backend.Axis3(fig[1, 1])
+  backend.arrows!(flat.x, flat.y, flat.z, B1[mask], B2[mask], B3[mask],
     arrowsize=0.0001, linewidth=0.00005, arrowcolor=colour_indicator, linecolor=colour_indicator)
+  return fig
 end
 
 function to_flat(B1, B2, B3, σ; B_flat_size)::Vector{Float64}
