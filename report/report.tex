@@ -1,5 +1,12 @@
 \documentclass[12pt]{article}
 \usepackage[en]{prettytex/base}
+\usepackage{prettytex/math}
+\usepackage{prettytex/code}
+\usepackage[toc, acronym, style=long3col, indexonlyfirst=true, nogroupskip=true]{glossaries}
+\usepackage[backend=biber, citestyle=authoryear, bibstyle=authoryear, hyperref=true, sorting=none, maxbibnames=99]{biblatex}
+\usepackage{csquotes}
+\usepackage[nameinlink]{cleveref}
+\usepackage{dsfont}
 
 % Reporting
 % from: https://static.uni-graz.at/fileadmin/projekte/biotechmedgraz/Programme/Lab_Rotation/Lab_Rotation_Program_Guidelines_2023.pdf
@@ -22,12 +29,124 @@
 \author{Peter Waldert}
 \date{29\th of February, 2024}
 
+\makenoidxglossaries
+\newacronym{mri}{MRI}{Magnetic Resonance Imaging}
+\newacronym{mrt}{MRT}{Magnetic Resonance Tomography}
+\newacronym{fft}{FFT}{Fast Fourier Transform}
+\newacronym{ifft}{IFFT}{Inverse Fast Fourier Transform}
+\newacronym{cdi}{CDI}{Current Density Imaging}
+
+\addbibresource{../literature/sources.bib}
+
 \begin{document}
   \maketitle
 
   \section{Summary}
   \section{Introduction}
+  This lab rotation was concerned with the development, exploration and implementation of a new optimisation approach for the reconstruction of current density / conductivity of tissue within a \gls{mri} setup.
+
+  The overall intention of \gls{mri} is to turn a source of contrast into an image for clinicians to use, mainly for the identification of different (potentially malignant) tissue types.
+  In the usual setting, this source of contrast is one of $T_1$, $T_2$ or $T_2^*$, three material constants.
+  Visualising these material properties in an image therefore allows to differentiate between different types of tissue visually.
+
+  \subsection{Mathematical Introduction to Magnetic Resonance Imaging}
+  The general equation governing the behaviour of these \textit{spin} objects is the Bloch equation:
+  \begin{equation}
+    \frac{\dd \vec{M}}{\ddt} = \gamma (\vec{M} \times \vec{B})\,.
+  \end{equation}
+
+  \subsection{The Biot-Savart Law}
+  For a given current density $\vec{j}(t): \Omega \to \R^3$ \footnote{
+    The current density $\vec{j} = nq\vec{v}$, describing the flow of $n$ charges $q$ with velocity $\vec{v}$, may be related to \textit{current} $I$ through the infinitesimal $\vec{j} \,\dd^3\vec{x} = I \,\dd\vec{x}$.
+  } on a domain $\Omega \subseteq \R^3$ at time $t \in \R^+$, Maxwell's fourth equation in differential form
+  $$\nabla \times \vec{B} = \mu_0 \left(\vec{j} + \epsilon_0 \frac{\partial \vec{E}}{\partial t}\right)\,,$$
+  relates the curl of the magnetic field $\vec{B}(t): \Omega \to \R^3$ to the current density $\vec{j}(t)$ and the temporal rate of change in the \textit{electric} field $\vec{E}(t): \Omega \to \R^3$.
+  $\epsilon_0$ and $\mu_0$ are the electric permittivity and magnetic permeability of free space, respectively.
+  The current density $\vec{j}$ is also connected to the electric field $\vec{E}$ through the, also position-dependent, electrical conductivity $\sigma: \Omega \to \R^+$
+  $$\vec{j} = \sigma \vec{E}\,.$$
+
+  In the \textbf{electrostatic case} (when the electric field $\vec{E}$ is indepent of time $t$), the last term in the above equation will vanish and we arrive at
+  $$\nabla \times \vec{B} = \mu_0 \vec{j}\,.$$
+  This equation, together with the freedom of divergence of the magnetic field (Maxwell's second equation), $\nabla \cdot \vec{B} = 0$, leads to the \textbf{Biot-Savart law}
+  \begin{equation}
+    \vec{B}(\vec{x})
+    = \frac{\mu_0}{4\pi} \int_\Omega \frac{\vec{j}(\vec{y}) \times (\vec{x} - \vec{y})}{\norm{\vec{x} - \vec{y}}_2^3} \,\dd\vec{y}
+    = \frac{\mu_0}{4\pi} \int_\Omega \frac{\vec{j}(\vec{y}) \times \vec{y}}{\norm{\vec{y}}_2^3} \,\dd\vec{y}
+    \label{eq:biot-savart}
+  \end{equation}
+  which provides an explicit expression for the magnetic field contribution $\vec{B}(\vec{x})$ at position $\vec{x} \in \Omega$ given a current density field $\vec{j}$.
+
+  \subsection{Current Density Imaging}
+
   \section{Methods}
+  For visualisation and as a general framework, we built upon the \textbf{KomaMRI} toolchain and Julia software package \parencite{2022-koma-mri}.
+  This choice made sense because of its feature-richness and further extensibility.
+
+  \subsection{Gridded Data Format}
+  In order to use KomaMRI together with the \gls{fft}-based, we had to adapt the storage format.
+  % used .h5
+
+  \subsection{FFT-accelerated evaluation of the Biot-Savart law}
+  Starting from the Biot-Savart law introduced above (cf. \Cref{eq:biot-savart}), we observe that splitting the cross-product ($\times$) into its three respective components
+  \begin{align*}
+    B_1(\vec{x}) & = \frac{\mu_0}{4\pi} \int_{\Omega} \frac{j_2(\vec{y}) \cdot (\vec{x}_3 - \vec{y}_3) - j_3(\vec{y}) \cdot (\vec{x}_2 - \vec{y}_2)}{\norm{\vec{x} - \vec{y}}_2^3} \,\dd\vec{y} \,, \\
+    B_2(\vec{x}) & = \frac{\mu_0}{4\pi} \int_{\Omega} \frac{j_3(\vec{y}) \cdot (\vec{x}_1 - \vec{y}_1) - j_1(\vec{y}) \cdot (\vec{x}_3 - \vec{y}_3)}{\norm{\vec{x} - \vec{y}}_2^3} \,\dd\vec{y} \,, \\
+    B_3(\vec{x}) & = \frac{\mu_0}{4\pi} \int_{\Omega} \frac{j_1(\vec{y}) \cdot (\vec{x}_2 - \vec{y}_2) - j_2(\vec{y}) \cdot (\vec{x}_1 - \vec{y}_1)}{\norm{\vec{x} - \vec{y}}_2^3} \,\dd\vec{y} \,,
+  \end{align*}
+  according to the explicit representation of the cross-product $\times$ in three spatial dimensions, most notably allows us to express $B_1$, $B_2$ and $B_3$ as convolution integrals
+  $$B_1(\vec{x}) = \frac{\mu_0}{4\pi} \int_{\Omega} \big[j_2(\vec{y}) g_3(\vec{x} - \vec{y}) - j_3(\vec{y}) g_2(\vec{x} - \vec{y})\big]\,\dd\vec{y} = \frac{\mu_0}{4\pi} \big[(j_2 *_{\Omega} g_3) - (j_3 *_{\Omega} g_2)\big](\vec{x})\,,$$
+  with $g_1, g_2, g_3: \Omega \to \R$, $g_1(\vec{x}) = \frac{\vec{x}_1}{\norm{\vec{x}}_2^3}$, $g_2(\vec{x}) = \frac{\vec{x}_2}{\norm{\vec{x}}_2^3}$ and $g_3(\vec{x}) = \frac{\vec{x}_3}{\norm{\vec{x}}_2^3}$ and the respective analogs for $B_2$ and $B_3$ \parencite{2020-biot-savart-evaluation-fft}.
+
+  Using the convolution theorem
+  $$\mathcal{F}[f * g](\vec{k}) = \mathcal{F}[f](\vec{k}) \cdot \mathcal{F}[g](\vec{k}) \quad\text{where}\quad \mathcal{F}[f](\vec{k}) := \int f(\vec{x}) \e^{-\i \vec{k} \vec{x}}\,\dd\vec{x}\,,$$
+  (for more information, we refer the reader to \cite{2022-convolution-theorem}), the respective convolution integrals may be evaluated ``much faster'' using the \gls{fft} and \glstext{ifft}.
+  More precisely, this speedup is due to the computational complexity cost reduction from $\mathcal{O}(n^2)$ to $\mathcal{O}(n \log n)$. % TODO
+
+  The first component of the magnetic field $B_1 = \{\vec{B}\}_1$ may then be expressed as
+  $$B_1(\vec{x}) = \frac{\mu_0}{4\pi}\mathcal{F}^{-1}\left[\mathcal{F}(j_2) \cdot \mathcal{F}(g_3) - \mathcal{F}(j_3) \cdot \mathcal{F}(g_2)\right](\vec{x})\,,$$
+  and analogous expressions may be found for the second and third component $B_2$ and $B_3$, respectively.
+  Importantly, we can explicitly evaluate
+  $$\mathcal{F}[g_n](\vec{k}) = \mathcal{F}\left[\vec{x} \mapsto \frac{x_n}{\norm{\vec{x}}_2^3}\right](\vec{k}) = -\i \frac{k_n}{\norm{\vec{k}}_2^2}\,, \quad\text{for}\; n=1,2,3\,,$$
+  which allows for a direct evaluation of the above using only the \gls{fft}, \glstext{ifft}, addition and multiplication \parencite{2020-biot-savart-evaluation-fft}.
+
+  In code, this may be implemented like so:
+  \begin{minted}{julia}
+cross(a1, a2, a3, b1, b2, b3) = (
+  a2 .* b3 - a3 .* b2,
+  -(a1 .* b3 - a3 .* b1),
+  a1 .* b2 - a2 .* b1
+)
+
+function calculate_magnetic_field(cdp::CurrentDensityPhantom)::VectorField
+  # [obtain M_range, calculate g1, g2, g3 on the entire frequency domain]
+  c1, c2, c3 = cross(fft(pad_jx), fft(pad_jy), fft(pad_jz), g1, g2, g3)
+  B1, B2, B3 = real(ifft(c1)), real(ifft(c2)), real(ifft(c3))
+  return mu_0 .* (B1[M_range...], B2[M_range...], B3[M_range...])
+end
+  \end{minted}
+
+  \begin{figure}[H]
+    \centering
+    \begin{subfigure}[t]{0.48\textwidth}
+      \centering
+      \includegraphics[width=\textwidth]{../figures/demo-cdp-j-field.pdf}
+      \caption{Exemplary uniform, homogeneous current density vector field $\vec{j}(\vec{x}) = {j}_0 \hat{\vec{e}}_z \mathds{1}_{\vec{x} \in \Omega_s}$ on a sample rectangular domain.}
+      \label{fig:demo-cdp-j-field}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.48\textwidth}
+      \centering
+      \includegraphics[width=\textwidth]{../figures/demo-cdp-b-field.pdf}
+      \caption{Magnetic field $\vec{B}(\vec{x})$ resulting from the homogeneous current density field depicted in \Cref{fig:demo-cdp-j-field}.}
+      \label{fig:demo-cdp-b-field}
+    \end{subfigure}
+  \end{figure}
+
   \section{Results}
   \section{Future Perspectives}
+  \subsection{Usage as a Julia Package}
+
+  \pagebreak
+  \printbibliography
+  \printnoidxglossary[type=acronym, title={Acronyms}]
 \end{document}

@@ -50,13 +50,11 @@ function plot_current_density(cdp::CurrentDensityPhantom; backend=GLMakie)
   return fig
 end
 
-function cross(a1, a2, a3, b1, b2, b3)
-  return (
-    a2 .* b3 - a3 .* b2,
-    -(a1 .* b3 - a3 .* b1),
-    a1 .* b2 - a2 .* b1
-  )
-end
+cross(a1, a2, a3, b1, b2, b3) = (
+  a2 .* b3 - a3 .* b2,
+  -(a1 .* b3 - a3 .* b1),
+  a1 .* b2 - a2 .* b1
+)
 
 function calculate_magnetic_field(cdp::CurrentDensityPhantom)::VectorField
   # s = max(grid.get_FOV(cdp.pog)...)
