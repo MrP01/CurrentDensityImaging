@@ -2,6 +2,7 @@
 \usepackage[en]{prettytex/base}
 \usepackage{prettytex/math}
 \usepackage{prettytex/code}
+\usepackage{prettytex/contract}
 \usepackage[toc, acronym, style=long3col, indexonlyfirst=true, nogroupskip=true]{glossaries}
 \usepackage[backend=biber, citestyle=authoryear, bibstyle=authoryear, hyperref=true, sorting=none, maxbibnames=99]{biblatex}
 \usepackage{csquotes}
@@ -25,8 +26,10 @@
 % from: https://biotechmedgraz.at/de/mitgliederbereich/programme/fragen-und-antworten-zum-biotechmed-graz-lab-rotation-programm/
 % Der von Ihrem/Ihrer Betreuer*in unterzeichnete Endbericht ist spätestens am letzten Tag Ihrer Lab Rotation per E-Mail an die BioTechMed-Graz Geschäftsstelle zu senden. Bitte beachten Sie Details zum Endbericht in den Lab Rotation Richtlinien.
 
-\title{Lab Rotation Report}
-\author{Peter Waldert}
+% https://physics.stackexchange.com/questions/302553/deriving-biot-savart-law-from-maxwells-equations
+
+\title{Current Density Imaging via MRI}
+\author{Peter Julius Waldert}
 \date{29\th of February, 2024}
 
 \makenoidxglossaries
@@ -39,12 +42,38 @@
 \addbibresource{../literature/sources.bib}
 
 \begin{document}
-  \maketitle
+  \makeatletter
+  \begin{center}
+    {\Huge \@title} \\
+    {\large BioTechMed-Graz Lab Rotation Report}
+    \vspace{.5cm}
+
+    of {\large \@author}
+    \vspace{.3cm}
+
+    supervised by \textbf{Prof. Kristian Bredies} at the \\
+    Institute of Mathematics and Scientific Computing (IMSC), \\
+    University of Graz, Austria
+    \vspace{.3cm}
+
+    {\@date}.
+  \end{center}
+  \makeatother
 
   \section{Summary}
-  \section{Introduction}
-  This lab rotation was concerned with the development, exploration and implementation of a new optimisation approach for the reconstruction of current density / conductivity of tissue within a \gls{mri} setup.
+  This lab rotation project was concerned with the development, exploration and implementation of a new optimisation approach for the reconstruction of current density / conductivity of tissue within a \gls{mri} setup.
 
+  The project was split into two steps: First, simulating the magnetic field modulation given a current density field inside a \textit{phantom} (the \textit{forward} procedure).
+  And second, reconstructing current density (including conductivity) using a novel optimisation model, based on measurements of the z-component of the magnetic field, with insight gained from the forward procedure (which, in turn is referred to as the \textit{backward} procedure).
+
+  \begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{../figures/komaui.png}
+    \caption{Koma UI}
+    \label{fig:komaui}
+  \end{figure}
+
+  \section{Introduction}
   The overall intention of \gls{mri} is to turn a source of contrast into an image for clinicians to use, mainly for the identification of different (potentially malignant) tissue types.
   In the usual setting, this source of contrast is one of $T_1$, $T_2$ or $T_2^*$, three material constants.
   Visualising these material properties in an image therefore allows to differentiate between different types of tissue visually.
@@ -59,14 +88,20 @@
   For a given current density $\vec{j}(t): \Omega \to \R^3$ \footnote{
     The current density $\vec{j} = nq\vec{v}$, describing the flow of $n$ charges $q$ with velocity $\vec{v}$, may be related to \textit{current} $I$ through the infinitesimal $\vec{j} \,\dd^3\vec{x} = I \,\dd\vec{x}$.
   } on a domain $\Omega \subseteq \R^3$ at time $t \in \R^+$, Maxwell's fourth equation in differential form
-  $$\nabla \times \vec{B} = \mu_0 \left(\vec{j} + \epsilon_0 \frac{\partial \vec{E}}{\partial t}\right)\,,$$
+  \begin{equation*}
+    \nabla \times \vec{B} = \mu_0 \left(\vec{j} + \epsilon_0 \frac{\partial \vec{E}}{\partial t}\right)\,,
+    \label{eq:maxwell-4}
+  \end{equation*}
   relates the curl of the magnetic field $\vec{B}(t): \Omega \to \R^3$ to the current density $\vec{j}(t)$ and the temporal rate of change in the \textit{electric} field $\vec{E}(t): \Omega \to \R^3$.
   $\epsilon_0$ and $\mu_0$ are the electric permittivity and magnetic permeability of free space, respectively.
   The current density $\vec{j}$ is also connected to the electric field $\vec{E}$ through the, also position-dependent, electrical conductivity $\sigma: \Omega \to \R^+$
   $$\vec{j} = \sigma \vec{E}\,.$$
 
   In the \textbf{electrostatic case} (when the electric field $\vec{E}$ is indepent of time $t$), the last term in the above equation will vanish and we arrive at
-  $$\nabla \times \vec{B} = \mu_0 \vec{j}\,.$$
+  \begin{equation}
+    \nabla \times \vec{B} = \mu_0 \vec{j}\,.
+    \label{eq:maxwell-4-electrostatic}
+  \end{equation}
   This equation, together with the freedom of divergence of the magnetic field (Maxwell's second equation), $\nabla \cdot \vec{B} = 0$, leads to the \textbf{Biot-Savart law}
   \begin{equation}
     \vec{B}(\vec{x})
@@ -97,7 +132,7 @@
   $$B_1(\vec{x}) = \frac{\mu_0}{4\pi} \int_{\Omega} \big[j_2(\vec{y}) g_3(\vec{x} - \vec{y}) - j_3(\vec{y}) g_2(\vec{x} - \vec{y})\big]\,\dd\vec{y} = \frac{\mu_0}{4\pi} \big[(j_2 *_{\Omega} g_3) - (j_3 *_{\Omega} g_2)\big](\vec{x})\,,$$
   with $g_1, g_2, g_3: \Omega \to \R$, $g_1(\vec{x}) = \frac{\vec{x}_1}{\norm{\vec{x}}_2^3}$, $g_2(\vec{x}) = \frac{\vec{x}_2}{\norm{\vec{x}}_2^3}$ and $g_3(\vec{x}) = \frac{\vec{x}_3}{\norm{\vec{x}}_2^3}$ and the respective analogs for $B_2$ and $B_3$ \parencite{2020-biot-savart-evaluation-fft}.
 
-  Using the convolution theorem
+  Using the convolution theorem for two functions $f$ and $g$
   $$\mathcal{F}[f * g](\vec{k}) = \mathcal{F}[f](\vec{k}) \cdot \mathcal{F}[g](\vec{k}) \quad\text{where}\quad \mathcal{F}[f](\vec{k}) := \int f(\vec{x}) \e^{-\i \vec{k} \vec{x}}\,\dd\vec{x}\,,$$
   (for more information, we refer the reader to \cite{2022-convolution-theorem}), the respective convolution integrals may be evaluated ``much faster'' using the \gls{fft} and \glstext{ifft}.
   More precisely, this speedup is due to the computational complexity cost reduction from $\mathcal{O}(n^2)$ to $\mathcal{O}(n \log n)$. % TODO
@@ -106,7 +141,8 @@
   $$B_1(\vec{x}) = \frac{\mu_0}{4\pi}\mathcal{F}^{-1}\left[\mathcal{F}(j_2) \cdot \mathcal{F}(g_3) - \mathcal{F}(j_3) \cdot \mathcal{F}(g_2)\right](\vec{x})\,,$$
   and analogous expressions may be found for the second and third component $B_2$ and $B_3$, respectively.
   Importantly, we can explicitly evaluate
-  $$\mathcal{F}[g_n](\vec{k}) = \mathcal{F}\left[\vec{x} \mapsto \frac{x_n}{\norm{\vec{x}}_2^3}\right](\vec{k}) = -\i \frac{k_n}{\norm{\vec{k}}_2^2}\,, \quad\text{for}\; n=1,2,3\,,$$
+  $$\mathcal{F}[g_n](\vec{k}) = \mathcal{F}\left[\vec{x} \mapsto \frac{x_n}{\norm{\vec{x}}_2^3}\right](\vec{k}) = -4\pi\i \frac{k_n}{\norm{\vec{k}}_2^2}\,, \quad\text{for}\; n=1,2,3\,,$$
+  where $\i$ is the imaginary unit,
   which allows for a direct evaluation of the above using only the \gls{fft}, \glstext{ifft}, addition and multiplication \parencite{2020-biot-savart-evaluation-fft}.
 
   In code, this may be implemented like so:
@@ -142,9 +178,34 @@ end
     \end{subfigure}
   \end{figure}
 
+  \subsection{The Optimisation Approach}
+  In order to be able to reconstruct the current density vector field $\vec{j}$ and conductivity scalar field $\sigma$, we employed the following optimisation model:
+  \begin{align*}
+    \vec{B}^*, \sigma^* & = \argmin_{\vec{B}, \sigma} &  & \frac{1}{2} \norm{\{\vec{B}\}_3 - B_3^0}_2^2 + \frac{\alpha}{2} \int_\Omega \frac{\norm{\nabla \times B(\vec{x})}_2}{\sigma(\vec{x})} \,\dd\vec{x} + R(\sigma) \\
+                        & \text{subject to}           &  & \nabla \cdot \vec{B} = \div \vec{B} = 0                                                                                                                        \\
+                        & \text{and}                  &  & \sigma \in [\sigma_0, \sigma_1]
+  \end{align*}
+
+  Using Maxwell's second equation, one can obtain the corresponding current density $\vec{j}^*$ from Maxwell's fourth equation in the electrostatic case (\Cref{eq:maxwell-4-electrostatic}),
+  $$\vec{j}^* = \frac{1}{\mu_0} (\nabla \times \vec{B}^*)$$
+
+  The optimisation was performed using the Optim.jl optimisation library \parencite{2018-optim-jl}.
+
   \section{Results}
-  \section{Future Perspectives}
   \subsection{Usage as a Julia Package}
+
+  \section{Future Perspectives}
+  \subsection{Alternate Formulation and Splitting Method}
+  As was suggested by Prof. Bredies, one could approach the problem using an alternative model and optimisation routine:
+  \begin{align*}
+    \vec{B}^*, \sigma^* & = \argmin_{\vec{B}, \sigma}
+  \end{align*}
+
+  \vspace{4cm}
+  \SignatureAndDate{(Peter Waldert)}
+
+  \vspace{2cm}
+  \SignatureAndDate{(Prof. Kristian Bredies)}
 
   \pagebreak
   \printbibliography
