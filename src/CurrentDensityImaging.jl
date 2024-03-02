@@ -134,12 +134,10 @@ function find_matching_B(Bz0::Array{Float64,3})
   x0 = to_flat(ones(B_shape), zeros(B_shape), zeros(B_shape), ones(B_shape); B_flat_size)
   function f(x::Vector{Float64})
     Bx, By, Bz, σ = from_flat(x; B_shape, B_flat_size)
-    # divergence = diff(Bx, dims=1) + diff(By, dims=2) + diff(Bz, dims=3)  # TODO: must match dimensions
-    divergence_penalty = LinearAlgebra.norm(diff(Bx, dims=1)) +
-                         LinearAlgebra.norm(diff(By, dims=2)) +
-                         LinearAlgebra.norm(diff(Bz, dims=3))  # this is not really the divergence
+    divergence_penalty = sum(diff(Bx, dims=1) .^ 2) + sum(diff(By, dims=2) .^ 2) + sum(diff(Bz, dims=3) .^ 2)
+    σ_tv_regulariser = sum(diff(σ, dims=1) .^ 2) + sum(diff(σ, dims=2) .^ 2) + sum(diff(σ, dims=3) .^ 2)
     # return LinearAlgebra.norm(Bz - Bz0) .^ 2 / 2 + alpha / 2 * LinearAlgebra.norm(curl(B)) / σ + R(σ)
-    return LinearAlgebra.norm(Bz - Bz0) .^ 2 / 2 + divergence_penalty^2
+    return LinearAlgebra.norm(Bz - Bz0) .^ 2 / 2 + divergence_penalty + σ_tv_regulariser
   end
   result = Optim.optimize(f, x0, Optim.LBFGS())
   return result

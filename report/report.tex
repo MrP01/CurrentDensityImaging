@@ -28,7 +28,7 @@
 
 % https://physics.stackexchange.com/questions/302553/deriving-biot-savart-law-from-maxwells-equations
 
-\title{Current Density Imaging via MRI}
+\title{Magnetic Resonance Current Density Imaging}
 \author{Peter Julius Waldert}
 \date{29\th of February, 2024}
 
@@ -38,22 +38,25 @@
 \newacronym{fft}{FFT}{Fast Fourier Transform}
 \newacronym{ifft}{IFFT}{Inverse Fast Fourier Transform}
 \newacronym{cdi}{CDI}{Current Density Imaging}
+\newacronym{tv}{TV}{Total Variation}
 
 \addbibresource{../literature/sources.bib}
+
+\renewcommand{\norm}[1]{\left\lVert#1\right\rVert_{\scriptscriptstyle 2}}
 
 \begin{document}
   \makeatletter
   \begin{center}
     {\Huge \@title} \\
-    a {\large BioTechMed-Graz Lab Rotation Report}
+    a\hspace{.4em}{\large BioTechMed-Graz Lab Rotation Report}
     \vspace{.5cm}
 
-    of {\large \@author}
+    of\hspace{.5em}{\large \@author}
     \vspace{.3cm}
 
     supervised by \textbf{Prof. Kristian Bredies} at the \\
     Institute of Mathematics and Scientific Computing (IMSC), \\
-    University of Graz, Austria
+    University of Graz, Austria,
     \vspace{.3cm}
 
     {\@date}.
@@ -81,12 +84,12 @@
   \subsection{Mathematical Introduction to Magnetic Resonance Imaging}
   The general equation governing the behaviour of these \textit{spin} objects is the Bloch equation:
   \begin{equation}
-    \frac{\dd \vec{M}}{\ddt} = \gamma (\vec{M} \times \vec{B})\,.
+    \frac{\dd \vec{M}}{\ddt} = \gamma (\vec{M} \times \vec{B}) - \frac{(M_z - M_0) \vec{e_z}}{T_1} - \frac{M_x \vec{e_x} + M_y \vec{e_y}}{T_2}\,.
   \end{equation}
 
   \subsection{The Biot-Savart Law}
   For a given current density $\vec{j}(t): \Omega \to \R^3$ \footnote{
-    The current density $\vec{j} = nq\vec{v}$, describing the flow of $n$ charges $q$ with velocity $\vec{v}$, may be related to \textit{current} $I$ through the infinitesimal $\vec{j} \,\dd^3\vec{x} = I \,\dd\vec{x}$.
+    The current density $\vec{j} = nq\vec{v}$, describing the flow of $n$ charges $q$ with velocity $\vec{v}$, may be related to \textit{current} $I$ through the infinitesimal $\vec{j} \idd^3\vec{x} = I \idd\vec{x}$.
   } on a domain $\Omega \subseteq \R^3$ at time $t \in \R^+$, Maxwell's fourth equation in differential form
   \begin{equation*}
     \nabla \times \vec{B} = \mu_0 \left(\vec{j} + \epsilon_0 \frac{\partial \vec{E}}{\partial t}\right)\,,
@@ -105,8 +108,8 @@
   This equation, together with the freedom of divergence of the magnetic field (Maxwell's second equation), $\nabla \cdot \vec{B} = 0$, leads to the \textbf{Biot-Savart law}
   \begin{equation}
     \vec{B}(\vec{x})
-    = \frac{\mu_0}{4\pi} \int_\Omega \frac{\vec{j}(\vec{y}) \times (\vec{x} - \vec{y})}{\norm{\vec{x} - \vec{y}}_2^3} \,\dd\vec{y}
-    = \frac{\mu_0}{4\pi} \int_\Omega \frac{\vec{j}(\vec{y}) \times \vec{y}}{\norm{\vec{y}}_2^3} \,\dd\vec{y}
+    = \frac{\mu_0}{4\pi} \int_\Omega \frac{\vec{j}(\vec{y}) \times (\vec{x} - \vec{y})}{\norm{\vec{x} - \vec{y}}^3} \idd\vec{y}
+    = \frac{\mu_0}{4\pi} \int_\Omega \frac{\vec{j}(\vec{y}) \times \vec{y}}{\norm{\vec{y}}^3} \idd\vec{y}
     \label{eq:biot-savart}
   \end{equation}
   which provides an explicit expression for the magnetic field contribution $\vec{B}(\vec{x})$ at position $\vec{x} \in \Omega$ given a current density field $\vec{j}$.
@@ -124,16 +127,16 @@
   \subsection{FFT-accelerated evaluation of the Biot-Savart law}
   Starting from the Biot-Savart law introduced above (cf. \Cref{eq:biot-savart}), we observe that splitting the cross-product ($\times$) into its three respective components
   \begin{align*}
-    B_1(\vec{x}) & = \frac{\mu_0}{4\pi} \int_{\Omega} \frac{j_2(\vec{y}) \cdot (\vec{x}_3 - \vec{y}_3) - j_3(\vec{y}) \cdot (\vec{x}_2 - \vec{y}_2)}{\norm{\vec{x} - \vec{y}}_2^3} \,\dd\vec{y} \,, \\
-    B_2(\vec{x}) & = \frac{\mu_0}{4\pi} \int_{\Omega} \frac{j_3(\vec{y}) \cdot (\vec{x}_1 - \vec{y}_1) - j_1(\vec{y}) \cdot (\vec{x}_3 - \vec{y}_3)}{\norm{\vec{x} - \vec{y}}_2^3} \,\dd\vec{y} \,, \\
-    B_3(\vec{x}) & = \frac{\mu_0}{4\pi} \int_{\Omega} \frac{j_1(\vec{y}) \cdot (\vec{x}_2 - \vec{y}_2) - j_2(\vec{y}) \cdot (\vec{x}_1 - \vec{y}_1)}{\norm{\vec{x} - \vec{y}}_2^3} \,\dd\vec{y} \,,
+    B_1(\vec{x}) & = \frac{\mu_0}{4\pi} \int_{\Omega} \frac{j_2(\vec{y}) \cdot (x_3 - y_3) - j_3(\vec{y}) \cdot (x_2 - y_2)}{\norm{\vec{x} - \vec{y}}^3} \idd\vec{y} \,, \\
+    B_2(\vec{x}) & = \frac{\mu_0}{4\pi} \int_{\Omega} \frac{j_3(\vec{y}) \cdot (x_1 - y_1) - j_1(\vec{y}) \cdot (x_3 - y_3)}{\norm{\vec{x} - \vec{y}}^3} \idd\vec{y} \,, \\
+    B_3(\vec{x}) & = \frac{\mu_0}{4\pi} \int_{\Omega} \frac{j_1(\vec{y}) \cdot (x_2 - y_2) - j_2(\vec{y}) \cdot (x_1 - y_1)}{\norm{\vec{x} - \vec{y}}^3} \idd\vec{y} \,,
   \end{align*}
   according to the explicit representation of the cross-product $\times$ in three spatial dimensions, most notably allows us to express $B_1$, $B_2$ and $B_3$ as convolution integrals
-  $$B_1(\vec{x}) = \frac{\mu_0}{4\pi} \int_{\Omega} \big[j_2(\vec{y}) g_3(\vec{x} - \vec{y}) - j_3(\vec{y}) g_2(\vec{x} - \vec{y})\big]\,\dd\vec{y} = \frac{\mu_0}{4\pi} \big[(j_2 *_{\Omega} g_3) - (j_3 *_{\Omega} g_2)\big](\vec{x})\,,$$
-  with $g_1, g_2, g_3: \Omega \to \R$, $g_1(\vec{x}) = \frac{\vec{x}_1}{\norm{\vec{x}}_2^3}$, $g_2(\vec{x}) = \frac{\vec{x}_2}{\norm{\vec{x}}_2^3}$ and $g_3(\vec{x}) = \frac{\vec{x}_3}{\norm{\vec{x}}_2^3}$ and the respective analogs for $B_2$ and $B_3$ \parencite{2020-biot-savart-evaluation-fft}.
+  $$B_1(\vec{x}) = \frac{\mu_0}{4\pi} \int_{\Omega} \big[j_2(\vec{y}) g_3(\vec{x} - \vec{y}) - j_3(\vec{y}) g_2(\vec{x} - \vec{y})\big]\idd\vec{y} = \frac{\mu_0}{4\pi} \big[(j_2 *_{\Omega} g_3) - (j_3 *_{\Omega} g_2)\big](\vec{x})\,,$$
+  with $g_1, g_2, g_3: \Omega \to \R$, $g_1(\vec{x}) = \frac{\vec{x}_1}{\norm{\vec{x}}^3}$, $g_2(\vec{x}) = \frac{\vec{x}_2}{\norm{\vec{x}}^3}$ and $g_3(\vec{x}) = \frac{\vec{x}_3}{\norm{\vec{x}}^3}$ and the respective analogs for $B_2$ and $B_3$ \parencite{2020-biot-savart-evaluation-fft}.
 
   Using the convolution theorem for two functions $f$ and $g$
-  $$\mathcal{F}[f * g](\vec{k}) = \mathcal{F}[f](\vec{k}) \cdot \mathcal{F}[g](\vec{k}) \quad\text{where}\quad \mathcal{F}[f](\vec{k}) := \int f(\vec{x}) \e^{-\i \vec{k} \vec{x}}\,\dd\vec{x}\,,$$
+  $$\mathcal{F}[f * g](\vec{k}) = \mathcal{F}[f](\vec{k}) \cdot \mathcal{F}[g](\vec{k}) \quad\text{where}\quad \mathcal{F}[f](\vec{k}) := \int f(\vec{x}) \e^{-\i \vec{k} \vec{x}}\idd\vec{x}\,,$$
   (for more information, we refer the reader to \cite{2022-convolution-theorem}), the respective convolution integrals may be evaluated ``much faster'' using the \gls{fft} and \glstext{ifft}.
   More precisely, this speedup is due to the computational complexity cost reduction from $\mathcal{O}(n^2)$ to $\mathcal{O}(n \log n)$. % TODO
 
@@ -141,7 +144,7 @@
   $$B_1(\vec{x}) = \frac{\mu_0}{4\pi}\mathcal{F}^{-1}\left[\mathcal{F}(j_2) \cdot \mathcal{F}(g_3) - \mathcal{F}(j_3) \cdot \mathcal{F}(g_2)\right](\vec{x})\,,$$
   and analogous expressions may be found for the second and third component $B_2$ and $B_3$, respectively.
   Importantly, we can explicitly evaluate
-  $$\mathcal{F}[g_n](\vec{k}) = \mathcal{F}\left[\vec{x} \mapsto \frac{x_n}{\norm{\vec{x}}_2^3}\right](\vec{k}) = -4\pi\i \frac{k_n}{\norm{\vec{k}}_2^2}\,, \quad\text{for}\; n=1,2,3\,,$$
+  $$\mathcal{F}[g_n](\vec{k}) = \mathcal{F}\left[\vec{x} \mapsto \frac{x_n}{\norm{\vec{x}}^3}\right](\vec{k}) = -4\pi\i \frac{k_n}{\norm{\vec{k}}^2}\,, \quad\text{for}\; n=1,2,3\,,$$
   where $\i$ is the imaginary unit,
   which allows for a direct evaluation of the above using only the \gls{fft}, \glstext{ifft}, addition and multiplication \parencite{2020-biot-savart-evaluation-fft}.
 
@@ -181,10 +184,24 @@ end
   \subsection{The Optimisation Approach}
   In order to be able to reconstruct the current density vector field $\vec{j}$ and conductivity scalar field $\sigma$, we employed the following optimisation model:
   \begin{align*}
-    \vec{B}^*, \sigma^* & = \argmin_{\vec{B}, \sigma} &  & \frac{1}{2} \norm{\{\vec{B}\}_3 - B_3^0}_2^2 + \frac{\alpha}{2} \int_\Omega \frac{\norm{\nabla \times B(\vec{x})}_2}{\sigma(\vec{x})} \,\dd\vec{x} + R(\sigma) \\
-                        & \text{subject to}           &  & \nabla \cdot \vec{B} = \div \vec{B} = 0                                                                                                                        \\
+    \vec{B}^*, \sigma^* & = \argmin_{\vec{B}, \sigma} &  & \frac{1}{2} \norm{\{\vec{B}\}_3 - B_3^0}^2 + \frac{\alpha}{2} \int_\Omega \frac{\norm{\nabla \times B(\vec{x})}}{\sigma(\vec{x})} \idd\vec{x} + R(\sigma) \\
+                        & \text{subject to}           &  & \nabla \cdot \vec{B} = \div \vec{B} = 0                                                                                                                   \\
                         & \text{and}                  &  & \sigma \in [\sigma_0, \sigma_1]
   \end{align*}
+
+  One may include the constraint as a penalty term to the objective function:
+  \begin{align*}
+    \int_\Omega \norm{\div \vec{B}(\vec{x})} \idd\vec{x} & = \int_\Omega \sqrt{\left(\frac{\partial B_1}{\partial x_1}\right)^2 + \left(\frac{\partial B_2}{\partial x_2}\right)^2 + \left(\frac{\partial B_3}{\partial x_3}\right)^2} \,\ddx_1\ddx_2\ddx_3    \\
+                                                         & \leq \int_\Omega \left(\left|\frac{\partial B_1}{\partial x_1}\right| + \left|\frac{\partial B_2}{\partial x_2}\right| + \left|\frac{\partial B_3}{\partial x_3}\right|\right) \,\ddx_1\ddx_2\ddx_3
+  \end{align*}
+
+  Even better, we square
+  \begin{align*}
+    p_{\rm div} & = \int_\Omega \norm{\div \vec{B}(\vec{x})}^2 \idd\vec{x} = \int_{\Omega} \norm{\nabla \cdot \vec{B}(x_1, x_2, x_3)}^2 \,\ddx_1\ddx_2\ddx_3                                                             \\
+                & = \int_\Omega \left(\left(\frac{\partial B_1}{\partial x_1}\right)^2 + \left(\frac{\partial B_2}{\partial x_2}\right)^2 + \left(\frac{\partial B_3}{\partial x_3}\right)^2\right) \,\ddx_1\ddx_2\ddx_3
+  \end{align*}
+
+  As a regulariser for the conductivity $\sigma$, we used the \gls{tv}, 1-norm of the gradient, of $\sigma$.
 
   Using Maxwell's second equation, one can obtain the corresponding current density $\vec{j}^*$ from Maxwell's fourth equation in the electrostatic case (\Cref{eq:maxwell-4-electrostatic}),
   $$\vec{j}^* = \frac{1}{\mu_0} (\nabla \times \vec{B}^*)$$
