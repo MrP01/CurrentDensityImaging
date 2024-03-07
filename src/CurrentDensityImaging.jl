@@ -9,13 +9,14 @@ import Optim
 include("./grid.jl")
 
 const μ_0 = 12.0
-const VectorField = Tuple{Array{Float64,3},Array{Float64,3},Array{Float64,3}}
+const FieldComponent = Array{Float64,3}
+const VectorField = Tuple{FieldComponent,FieldComponent,FieldComponent}
 
 @kwdef struct CurrentDensityPhantom
   pog::grid.PhantomOnAGrid  # phantom on grid
-  jx::Array{Float64,3} = ones(size(pog.ρ))
-  jy::Array{Float64,3} = zeros(size(pog.ρ))
-  jz::Array{Float64,3} = zeros(size(pog.ρ))
+  jx::FieldComponent = ones(size(pog.ρ))
+  jy::FieldComponent = zeros(size(pog.ρ))
+  jz::FieldComponent = zeros(size(pog.ρ))
 end
 
 rtoi(x) = Int32(round(x))
@@ -27,10 +28,12 @@ function convertToDemoCDP(pog::grid.PhantomOnAGrid)::CurrentDensityPhantom
   # jz[4, 4, :] .= 1 / 2000
   return CurrentDensityPhantom(pog, zeros(size(pog.ρ)), zeros(size(pog.ρ)), jz)
 end
-function generateDemoCDP(shape=(8, 8, 4))::CurrentDensityPhantom
+function generateDemoPOG(shape=(8, 8, 4))::grid.PhantomOnAGrid
   sero = zeros(shape)
-  pog = grid.PhantomOnAGrid(name="demo phantom!", ρ=ones(shape), T1=sero, T2=sero, T2s=sero, Δw=sero, Δx=vec([0.001, 0.001, 0.001]), offset=vec([0, 0, 0]))
-  return convertToDemoCDP(pog)
+  return grid.PhantomOnAGrid(name="demo phantom!", ρ=ones(shape), T1=sero, T2=sero, T2s=sero, Δw=sero, Δx=vec([0.001, 0.001, 0.001]), offset=vec([0, 0, 0]))
+end
+function generateDemoCDP(shape=(8, 8, 4))::CurrentDensityPhantom
+  return convertToDemoCDP(generateDemoPOG(shape))
 end
 function loadBrainCDP()::CurrentDensityPhantom
   brain_h5 = joinpath(dirname(pathof(KomaMRI)), "../examples/2.phantoms/brain.h5")
@@ -55,6 +58,15 @@ cross(a1, a2, a3, b1, b2, b3) = (
   -(a1 .* b3 - a3 .* b1),
   a1 .* b2 - a2 .* b1
 )
+
+function curl(B1::FieldComponent, B2::FieldComponent, B3::FieldComponent)::VectorField
+  Mx, My, Mz = size(B1)
+  jx, jy, jz = zeros(Mx, My, Mz), zeros(Mx, My, Mz), zeros(Mx, My, Mz)
+  jx[:, 1:My-1, 1:Mz-1] = diff(B3, dims=2)[:, :, 1:Mz-1] - diff(B2, dims=3)[:, 1:My-1, :]
+  jy[1:Mx-1, :, 1:Mz-1] = diff(B3, dims=1)[:, :, 1:Mz-1] - diff(B1, dims=3)[1:Mx-1, :, :]
+  jz[1:Mx-1, 1:My-1, :] = diff(B1, dims=2)[1:Mx-1, :, :] - diff(B2, dims=1)[:, 1:My-1, :]
+  return (jx, jy, jz) .* 1e5
+end
 
 function calculate_magnetic_field(cdp::CurrentDensityPhantom)::VectorField
   # s = max(grid.get_FOV(cdp.pog)...)
@@ -128,9 +140,8 @@ function from_flat(x::Vector{Float64}; B_shape, B_flat_size)
   )
 end
 
-function find_matching_B(Bz0::Array{Float64,3})
-  B_shape = size(Bz0)
-  B_flat_size = prod(B_shape)
+function find_matching_B(Bz0::FieldComponent)
+  B_shape = size(Bz0); B_flat_size = prod(B_shape);
   x0 = to_flat(ones(B_shape), zeros(B_shape), zeros(B_shape), ones(B_shape); B_flat_size)
   function f(x::Vector{Float64})
     Bx, By, Bz, σ = from_flat(x; B_shape, B_flat_size)
@@ -143,12 +154,14 @@ function find_matching_B(Bz0::Array{Float64,3})
   return result
 end
 
-function solve(Bz0::Array{Float64,3})::CurrentDensityPhantom
-  B_result = find_matching_B(Bz0)
-  @show B_result
+function solve(Bz0::FieldComponent)::CurrentDensityPhantom
+  result = find_matching_B(Bz0)
+  @show result
+  B_shape = size(Bz0); B_flat_size = prod(B_shape);
   B1, B2, B3, σ = CDI.from_flat(result.minimizer; B_shape, B_flat_size)
-  jx, jy, jz = curl(B1, B2, B3) / μ_0
-  return CurrentDensityPhantom()
+  jx, jy, jz = curl(B1, B2, B3) ./ μ_0
+  pog = generateDemoPOG(B_shape)
+  return CurrentDensityPhantom(pog, jx, jy, jz)
 end
 
 greet() = print("Hello World!")
