@@ -23,10 +23,14 @@ rtoi(x) = Int32(round(x))
 
 function convertToDemoCDP(pog::grid.PhantomOnAGrid)::CurrentDensityPhantom
   shape = size(pog.ρ)
+  jx = zeros(shape)
+  jy = zeros(shape)
   jz = zeros(shape)
-  jz[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= 1 / 4000
-  # jz[4, 4, :] .= 1 / 2000
-  return CurrentDensityPhantom(pog, zeros(size(pog.ρ)), zeros(size(pog.ρ)), jz)
+  jx[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= 1 / 8e3
+  jy[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= 1 / 8e3
+  jz[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= 1 / 12e3
+  jz .*= 1:shape[1]
+  return CurrentDensityPhantom(pog, jx, jy, jz)
 end
 function generateDemoPOG(shape=(8, 8, 4))::grid.PhantomOnAGrid
   sero = zeros(shape)
@@ -60,9 +64,18 @@ cross(a1, a2, a3, b1, b2, b3) = (
 )
 
 function centraldiff(X; dims)
-  if dims == 1; A = X[1:end-1, :, :]; B = X[2:end, :, :]; end
-  if dims == 2; A = X[:, 1:end-1, :]; B = X[:, 2:end, :]; end
-  if dims == 3; A = X[:, :, 1:end-1]; B = X[:, :, 2:end]; end
+  if dims == 1
+    A = X[1:end-1, :, :]
+    B = X[2:end, :, :]
+  end
+  if dims == 2
+    A = X[:, 1:end-1, :]
+    B = X[:, 2:end, :]
+  end
+  if dims == 3
+    A = X[:, :, 1:end-1]
+    B = X[:, :, 2:end]
+  end
   return (diff(A, dims=dims) + diff(B, dims=dims)) ./ 2
 end
 
@@ -118,7 +131,7 @@ function calculate_magnetic_field(cdp::CurrentDensityPhantom)::VectorField
 end
 
 function reconstructCDPFromB(B1::FieldComponent, B2::FieldComponent, B3::FieldComponent)
-  B_shape = size(B1);
+  B_shape = size(B1)
   jx, jy, jz = curl(B1, B2, B3) ./ μ_0
   pog = generateDemoPOG(B_shape)
   return CurrentDensityPhantom(pog, jx, jy, jz)
@@ -155,23 +168,30 @@ function from_flat(x::Vector{Float64}; B_shape, B_flat_size)
 end
 
 function find_matching_B(Bz0::FieldComponent)
-  B_shape = size(Bz0); B_flat_size = prod(B_shape);
-  x0 = to_flat(ones(B_shape), zeros(B_shape), zeros(B_shape), ones(B_shape); B_flat_size)
+  B_shape = size(Bz0)
+  B_flat_size = prod(B_shape)
+  x0 = to_flat(ones(B_shape), ones(B_shape), Bz0, ones(B_shape); B_flat_size)
   function f(x::Vector{Float64})
     Bx, By, Bz, σ = from_flat(x; B_shape, B_flat_size)
-    divergence_penalty = sum(centraldiff(Bx, dims=1) .^ 2) + sum(centraldiff(By, dims=2) .^ 2) + sum(centraldiff(Bz, dims=3) .^ 2)
+    jx, jy, jz = curl(Bx, By, Bz)
+    power_dissipation = 1e-4 / 2 * sum((jx .^ 2 + jy .^ 2 + jz .^ 2) ./ σ)  # in units of power (Watt)
+    dBx, dBy, dBz = centraldiff(Bx, dims=1), centraldiff(By, dims=2), centraldiff(Bz, dims=3)
+    divergence_penalty = sum((dBx[:, 2:end-1, 2:end-1] + dBy[2:end-1, :, 2:end-1] + dBz[2:end-1, 2:end-1, :]) .^ 2)
     σ_tv_regulariser = sum(centraldiff(σ, dims=1) .^ 2) + sum(centraldiff(σ, dims=2) .^ 2) + sum(centraldiff(σ, dims=3) .^ 2)
-    # return LinearAlgebra.norm(Bz - Bz0) .^ 2 / 2 + alpha / 2 * LinearAlgebra.norm(curl(B)) / σ + R(σ)
-    return sum((Bz - Bz0) .^ 2) / 2 + divergence_penalty + σ_tv_regulariser
+    @show sum((Bz - Bz0) .^ 2) / 2, power_dissipation, divergence_penalty, σ_tv_regulariser
+    return 1e3 * sum((Bz - Bz0) .^ 2) / 2 + power_dissipation + divergence_penalty + σ_tv_regulariser
   end
-  result = Optim.optimize(f, x0, Optim.LBFGS())
+  # B1, B2, B3 = CDI.calculate_magnetic_field(CDI.generateDemoCDP())
+  # @show f(to_flat(B1, B2, B3, ones(B_shape); B_flat_size))
+  result = Optim.optimize(f, x0, method=Optim.LBFGS(), iterations=120)
   return result
 end
 
 function solve(Bz0::FieldComponent)::CurrentDensityPhantom
   result = find_matching_B(Bz0)
   @show result
-  B_shape = size(Bz0); B_flat_size = prod(B_shape);
+  B_shape = size(Bz0)
+  B_flat_size = prod(B_shape)
   B1, B2, B3, σ = CDI.from_flat(result.minimizer; B_shape, B_flat_size)
   return reconstructCDPFromB(B1, B2, B3)
 end

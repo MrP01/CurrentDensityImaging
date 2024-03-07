@@ -8,6 +8,7 @@
 \usepackage{csquotes}
 \usepackage[nameinlink]{cleveref}
 \usepackage{dsfont}
+\usepackage{siunitx}
 
 % Reporting
 % from: https://static.uni-graz.at/fileadmin/projekte/biotechmedgraz/Programme/Lab_Rotation/Lab_Rotation_Program_Guidelines_2023.pdf
@@ -184,8 +185,8 @@ end
   \subsection{The Optimisation Approach}
   In order to be able to reconstruct the current density vector field $\vec{j}$ and conductivity scalar field $\sigma$, we employed the following optimisation model:
   \begin{align*}
-    \vec{B}^*, \sigma^* & = \argmin_{\vec{B}, \sigma} &  & \frac{1}{2} \norm{\{\vec{B}\}_3 - B_3^0}^2 + \frac{\alpha}{2} \int_\Omega \frac{\norm{\nabla \times B(\vec{x})}}{\sigma(\vec{x})} \idd\vec{x} + R(\sigma) \\
-                        & \text{subject to}           &  & \nabla \cdot \vec{B} = \div \vec{B} = 0                                                                                                                   \\
+    \vec{B}^*, \sigma^* & = \argmin_{\vec{B}, \sigma} &  & \frac{1}{2} \int_\Omega \norm{\{\vec{B}\}_3 - B_3^0}^2 \,\dd\vec{x} + \frac{\alpha}{2} \int_\Omega \frac{\norm{\nabla \times \vec{B}(\vec{x})}^2}{\sigma(\vec{x})} \idd\vec{x} + R(\sigma) \\
+                        & \text{subject to}           &  & \nabla \cdot \vec{B} = \div \vec{B} = 0                                                                                                                                                    \\
                         & \text{and}                  &  & \sigma \in [\sigma_0, \sigma_1]
   \end{align*}
 
@@ -206,7 +207,11 @@ end
   Using Maxwell's second equation, one can obtain the corresponding current density $\vec{j}^*$ from Maxwell's fourth equation in the electrostatic case (\Cref{eq:maxwell-4-electrostatic}),
   $$\vec{j}^* = \frac{1}{\mu_0} (\nabla \times \vec{B}^*)$$
 
-  The optimisation was performed using the Optim.jl optimisation library \parencite{2018-optim-jl}.
+  \paragraph{Dimensional Analysis}
+  Note the unit of the integral kernel: the numerator is the squared norm of the current density, therefore in \unit{\ampere\squared\per\meter^4}. Together with the corresponding denominator (\unit{\siemens\per\meter}), the integral kernel has units of \unit{\ampere\squared\ohm\per\meter^3}, becoming \unit{\ampere\squared\ohm}, which can be simplified to \unit{\volt\ampere}, which is a unit of \textbf{power} (\unit{\volt\ampere} = \unit{W}).
+  This may be interpreted as a form of power dissipation outside of the domain and should therefore be minimised.
+
+  The iterates were produced using the Optim.jl optimisation library \parencite{2018-optim-jl}.
 
   \section{Results}
   \subsection{Usage as a Julia Package}
