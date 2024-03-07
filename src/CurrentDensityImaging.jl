@@ -4,7 +4,7 @@ import Lazy
 import LinearAlgebra
 import FastTransforms: fft, ifft, fftfreq
 import GLMakie
-import CairoMakie
+# import CairoMakie
 import Optim
 include("./grid.jl")
 
@@ -59,13 +59,20 @@ cross(a1, a2, a3, b1, b2, b3) = (
   a1 .* b2 - a2 .* b1
 )
 
+function centraldiff(X; dims)
+  if dims == 1; A = X[1:end-1, :, :]; B = X[2:end, :, :]; end
+  if dims == 2; A = X[:, 1:end-1, :]; B = X[:, 2:end, :]; end
+  if dims == 3; A = X[:, :, 1:end-1]; B = X[:, :, 2:end]; end
+  return (diff(A, dims=dims) + diff(B, dims=dims)) ./ 2
+end
+
 function curl(B1::FieldComponent, B2::FieldComponent, B3::FieldComponent)::VectorField
   Mx, My, Mz = size(B1)
   jx, jy, jz = zeros(Mx, My, Mz), zeros(Mx, My, Mz), zeros(Mx, My, Mz)
-  jx[:, 1:My-1, 1:Mz-1] = diff(B3, dims=2)[:, :, 1:Mz-1] - diff(B2, dims=3)[:, 1:My-1, :]
-  jy[1:Mx-1, :, 1:Mz-1] = diff(B3, dims=1)[:, :, 1:Mz-1] - diff(B1, dims=3)[1:Mx-1, :, :]
-  jz[1:Mx-1, 1:My-1, :] = diff(B1, dims=2)[1:Mx-1, :, :] - diff(B2, dims=1)[:, 1:My-1, :]
-  return (jx, jy, jz) .* 1e5
+  jx[:, 2:My-1, 2:Mz-1] = centraldiff(B3, dims=2)[:, :, 2:Mz-1] - centraldiff(B2, dims=3)[:, 2:My-1, :]
+  jy[2:Mx-1, :, 2:Mz-1] = centraldiff(B3, dims=1)[:, :, 2:Mz-1] - centraldiff(B1, dims=3)[2:Mx-1, :, :]
+  jz[2:Mx-1, 2:My-1, :] = centraldiff(B2, dims=1)[2:Mx-1, :, :] - centraldiff(B1, dims=2)[:, 2:My-1, :]
+  return (jx, jy, jz)
 end
 
 function calculate_magnetic_field(cdp::CurrentDensityPhantom)::VectorField
@@ -110,6 +117,13 @@ function calculate_magnetic_field(cdp::CurrentDensityPhantom)::VectorField
   return μ_0 .* (B1[M_range...], B2[M_range...], B3[M_range...])
 end
 
+function reconstructCDPFromB(B1::FieldComponent, B2::FieldComponent, B3::FieldComponent)
+  B_shape = size(B1);
+  jx, jy, jz = curl(B1, B2, B3) ./ μ_0
+  pog = generateDemoPOG(B_shape)
+  return CurrentDensityPhantom(pog, jx, jy, jz)
+end
+
 function plot_magnetic_field(cdp::CurrentDensityPhantom; backend=GLMakie)
   flat = grid.to_flat_phantom(cdp.pog)
   mask = cdp.pog.ρ .!= 0
@@ -145,10 +159,10 @@ function find_matching_B(Bz0::FieldComponent)
   x0 = to_flat(ones(B_shape), zeros(B_shape), zeros(B_shape), ones(B_shape); B_flat_size)
   function f(x::Vector{Float64})
     Bx, By, Bz, σ = from_flat(x; B_shape, B_flat_size)
-    divergence_penalty = sum(diff(Bx, dims=1) .^ 2) + sum(diff(By, dims=2) .^ 2) + sum(diff(Bz, dims=3) .^ 2)
-    σ_tv_regulariser = sum(diff(σ, dims=1) .^ 2) + sum(diff(σ, dims=2) .^ 2) + sum(diff(σ, dims=3) .^ 2)
+    divergence_penalty = sum(centraldiff(Bx, dims=1) .^ 2) + sum(centraldiff(By, dims=2) .^ 2) + sum(centraldiff(Bz, dims=3) .^ 2)
+    σ_tv_regulariser = sum(centraldiff(σ, dims=1) .^ 2) + sum(centraldiff(σ, dims=2) .^ 2) + sum(centraldiff(σ, dims=3) .^ 2)
     # return LinearAlgebra.norm(Bz - Bz0) .^ 2 / 2 + alpha / 2 * LinearAlgebra.norm(curl(B)) / σ + R(σ)
-    return LinearAlgebra.norm(Bz - Bz0) .^ 2 / 2 + divergence_penalty + σ_tv_regulariser
+    return sum((Bz - Bz0) .^ 2) / 2 + divergence_penalty + σ_tv_regulariser
   end
   result = Optim.optimize(f, x0, Optim.LBFGS())
   return result
@@ -159,9 +173,7 @@ function solve(Bz0::FieldComponent)::CurrentDensityPhantom
   @show result
   B_shape = size(Bz0); B_flat_size = prod(B_shape);
   B1, B2, B3, σ = CDI.from_flat(result.minimizer; B_shape, B_flat_size)
-  jx, jy, jz = curl(B1, B2, B3) ./ μ_0
-  pog = generateDemoPOG(B_shape)
-  return CurrentDensityPhantom(pog, jx, jy, jz)
+  return reconstructCDPFromB(B1, B2, B3)
 end
 
 greet() = print("Hello World!")
