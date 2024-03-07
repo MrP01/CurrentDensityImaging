@@ -70,8 +70,8 @@ function curl(B1::FieldComponent, B2::FieldComponent, B3::FieldComponent)::Vecto
   Mx, My, Mz = size(B1)
   jx, jy, jz = zeros(Mx, My, Mz), zeros(Mx, My, Mz), zeros(Mx, My, Mz)
   jx[:, 2:My-1, 2:Mz-1] = centraldiff(B3, dims=2)[:, :, 2:Mz-1] - centraldiff(B2, dims=3)[:, 2:My-1, :]
-  jy[2:Mx-1, :, 2:Mz-1] = centraldiff(B3, dims=1)[:, :, 2:Mz-1] - centraldiff(B1, dims=3)[2:Mx-1, :, :]
-  jz[2:Mx-1, 2:My-1, :] = centraldiff(B2, dims=1)[2:Mx-1, :, :] - centraldiff(B1, dims=2)[:, 2:My-1, :]
+  jy[2:Mx-1, :, 2:Mz-1] = centraldiff(B1, dims=3)[2:Mx-1, :, :] - centraldiff(B3, dims=1)[:, :, 2:Mz-1]
+  jz[2:Mx-1, 2:My-1, :] = centraldiff(B2, dims=1)[:, 2:My-1, :] - centraldiff(B1, dims=2)[2:Mx-1, :, :]
   return (jx, jy, jz)
 end
 
