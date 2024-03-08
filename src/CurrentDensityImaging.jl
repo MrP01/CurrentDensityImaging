@@ -23,18 +23,18 @@ rtoi(x) = Int32(round(x))
 
 function convertToDemoCDP(pog::grid.PhantomOnAGrid)::CurrentDensityPhantom
   shape = size(pog.ρ)
-  jx = zeros(shape)
-  jy = zeros(shape)
-  jz = zeros(shape)
-  jx[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= 1 / 8e3
-  jy[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= 1 / 8e3
-  jz[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= 1 / 12e3
+  jx = zeros(Float64, shape)
+  jy = zeros(Float64, shape)
+  jz = zeros(Float64, shape)
+  jx[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= 0.2
+  jy[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= 0.2
+  jz[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= 0.4
   jz .*= 1:shape[1]
   return CurrentDensityPhantom(pog, jx, jy, jz)
 end
 function generateDemoPOG(shape=(8, 8, 4))::grid.PhantomOnAGrid
-  sero = zeros(shape)
-  return grid.PhantomOnAGrid(name="demo phantom!", ρ=ones(shape), T1=sero, T2=sero, T2s=sero, Δw=sero, Δx=vec([0.001, 0.001, 0.001]), offset=vec([0, 0, 0]))
+  sero = zeros(Float64, shape)
+  return grid.PhantomOnAGrid(name="demo phantom!", ρ=ones(shape), T1=sero, T2=sero, T2s=sero, Δw=sero, Δx=vec([1.0, 1.0, 1.0]), offset=vec([0, 0, 0]))
 end
 function generateDemoCDP(shape=(8, 8, 4))::CurrentDensityPhantom
   return convertToDemoCDP(generateDemoPOG(shape))
@@ -53,7 +53,7 @@ function plot_current_density(cdp::CurrentDensityPhantom; backend=GLMakie)
   fig = backend.Figure()
   ax = backend.Axis3(fig[1, 1])
   backend.arrows!(flat.x, flat.y, flat.z, cdp.jx[mask], cdp.jy[mask], cdp.jz[mask],
-    arrowsize=0.0002, linewidth=0.00005, arrowcolor=colour_indicator, linecolor=colour_indicator)
+    arrowcolor=colour_indicator, linecolor=colour_indicator)
   return fig
 end
 
@@ -145,7 +145,7 @@ function plot_magnetic_field(cdp::CurrentDensityPhantom; backend=GLMakie)
   fig = backend.Figure()
   ax = backend.Axis3(fig[1, 1])
   backend.arrows!(flat.x, flat.y, flat.z, B1[mask], B2[mask], B3[mask],
-    arrowsize=0.0001, linewidth=0.00005, arrowcolor=colour_indicator, linecolor=colour_indicator)
+    arrowcolor=colour_indicator, linecolor=colour_indicator)
   return fig
 end
 
@@ -167,23 +167,39 @@ function from_flat(x::Vector{Float64}; B_shape, B_flat_size)
   )
 end
 
+function amplify_j(cdp::CurrentDensityPhantom; factor=3.0)
+  cdp.jx .*= factor
+  cdp.jy .*= factor
+  cdp.jz .*= factor
+end
+
+function objective(Bx, By, Bz, σ; Bz0)
+  jx, jy, jz = curl(Bx, By, Bz)
+  bz_match = 1e3 * sum((Bz - Bz0) .^ 2) / 2
+  power_dissipation = 1e-4 / 2 * sum((jx .^ 2 + jy .^ 2 + jz .^ 2) ./ σ)  # in units of power (Watt)
+  dBx, dBy, dBz = centraldiff(Bx, dims=1), centraldiff(By, dims=2), centraldiff(Bz, dims=3)
+  divergence_penalty = sum((dBx[:, 2:end-1, 2:end-1] + dBy[2:end-1, :, 2:end-1] + dBz[2:end-1, 2:end-1, :]) .^ 2)
+  σ_tv_regulariser = 1e-3 * (sum(centraldiff(σ, dims=1) .^ 2) + sum(centraldiff(σ, dims=2) .^ 2) + sum(centraldiff(σ, dims=3) .^ 2))
+  @show bz_match, power_dissipation, divergence_penalty, σ_tv_regulariser
+  return bz_match + power_dissipation + divergence_penalty + σ_tv_regulariser
+end
+
+function objectiveForCDP(cdp::CurrentDensityPhantom)
+  Bx, By, Bz = calculate_magnetic_field(cdp)
+  return objective(Bx, By, Bz, ones(size(Bx)); Bz0=Bz)
+end
+
 function find_matching_B(Bz0::FieldComponent)
   B_shape = size(Bz0)
   B_flat_size = prod(B_shape)
   x0 = to_flat(ones(B_shape), ones(B_shape), Bz0, ones(B_shape); B_flat_size)
   function f(x::Vector{Float64})
     Bx, By, Bz, σ = from_flat(x; B_shape, B_flat_size)
-    jx, jy, jz = curl(Bx, By, Bz)
-    power_dissipation = 1e-4 / 2 * sum((jx .^ 2 + jy .^ 2 + jz .^ 2) ./ σ)  # in units of power (Watt)
-    dBx, dBy, dBz = centraldiff(Bx, dims=1), centraldiff(By, dims=2), centraldiff(Bz, dims=3)
-    divergence_penalty = sum((dBx[:, 2:end-1, 2:end-1] + dBy[2:end-1, :, 2:end-1] + dBz[2:end-1, 2:end-1, :]) .^ 2)
-    σ_tv_regulariser = sum(centraldiff(σ, dims=1) .^ 2) + sum(centraldiff(σ, dims=2) .^ 2) + sum(centraldiff(σ, dims=3) .^ 2)
-    @show sum((Bz - Bz0) .^ 2) / 2, power_dissipation, divergence_penalty, σ_tv_regulariser
-    return 1e3 * sum((Bz - Bz0) .^ 2) / 2 + power_dissipation + divergence_penalty + σ_tv_regulariser
+    return objective(Bx, By, Bz, σ; Bz0)
   end
   # B1, B2, B3 = CDI.calculate_magnetic_field(CDI.generateDemoCDP())
   # @show f(to_flat(B1, B2, B3, ones(B_shape); B_flat_size))
-  result = Optim.optimize(f, x0, method=Optim.LBFGS(), iterations=120)
+  result = Optim.optimize(f, x0, method=Optim.LBFGS(), iterations=15)
   return result
 end
 
@@ -195,6 +211,4 @@ function solve(Bz0::FieldComponent)::CurrentDensityPhantom
   B1, B2, B3, σ = CDI.from_flat(result.minimizer; B_shape, B_flat_size)
   return reconstructCDPFromB(B1, B2, B3)
 end
-
-greet() = print("Hello World!")
 end
