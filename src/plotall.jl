@@ -22,27 +22,30 @@ function save_fig(fig, name::String; throughEps=false)
 end
 
 function plot_all()
-  cdp = CDI.generateDemoCDP((16, 16, 8))
+  CairoMakie.activate!()
+
+  # cdp = CDI.generateDemoCDP((16, 16, 8))
+  cdp = CDI.generateDemoCDP()
   fig = CDI.plot_current_density(cdp; backend=CairoMakie)
   save_fig(fig, "demo-cdp-j-field"; throughEps=true)
-  fig = CDI.plot_magnetic_field(cdp; backend=CairoMakie)
+  fig = CDI.plot_magnetic_field(cdp; backend=CairoMakie, factor=0.1)
   save_fig(fig, "demo-cdp-b-field"; throughEps=true)
 
   B1, B2, B3 = CDI.calculate_magnetic_field(cdp)
   cdpbr = CDI.reconstructCDPFromB(B1, B2, B3)
-  fig = CDI.plot_magnetic_field(cdpbr; backend=CairoMakie)
+  fig = CDI.plot_magnetic_field(cdpbr; backend=CairoMakie, factor=0.1)
   save_fig(fig, "cdpbr-b-field"; throughEps=true)
 
   cdpr = CDI.solve(B3)
   B1r, B2r, B3r = CDI.calculate_magnetic_field(cdpr)
-  fig = CDI.plot_current_density(cdpr; backend=CairoMakie)
+  fig = CDI.plot_current_density(cdpr; backend=CairoMakie, factor=9.0)
   save_fig(fig, "cdpr-j-field"; throughEps=true)
-  fig = CDI.plot_magnetic_field(cdpr; backend=CairoMakie)
+  fig = CDI.plot_magnetic_field(cdpr; backend=CairoMakie, factor=1.2)
   save_fig(fig, "cdpr-b-field"; throughEps=true)
 
   cdprr = CDI.solve(B3r)
-  fig = CDI.plot_current_density(cdprr; backend=CairoMakie)
+  fig = CDI.plot_current_density(cdprr; backend=CairoMakie, factor=12.0)
   save_fig(fig, "cdprr-j-field"; throughEps=true)
-  fig = CDI.plot_magnetic_field(cdprr; backend=CairoMakie)
+  fig = CDI.plot_magnetic_field(cdprr; backend=CairoMakie, factor=2.6)
   save_fig(fig, "cdprr-b-field"; throughEps=true)
 end

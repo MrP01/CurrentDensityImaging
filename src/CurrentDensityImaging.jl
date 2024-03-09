@@ -26,8 +26,8 @@ function convertToDemoCDP(pog::grid.PhantomOnAGrid)::CurrentDensityPhantom
   jx = zeros(Float64, shape)
   jy = zeros(Float64, shape)
   jz = zeros(Float64, shape)
-  jx[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= 0.2
-  jy[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= 0.2
+  jx[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= -0.3
+  jy[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= -0.3
   jz[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= 0.4
   jz .*= 1:shape[1]
   return CurrentDensityPhantom(pog, jx, jy, jz)
@@ -46,13 +46,15 @@ function loadBrainCDP()::CurrentDensityPhantom
 end
 
 Lazy.@forward CurrentDensityPhantom.pog KomaMRI.plot_phantom_map
-function plot_current_density(cdp::CurrentDensityPhantom; backend=GLMakie)
+function plot_current_density(cdp::CurrentDensityPhantom; backend=GLMakie, factor=1.0)
   flat = grid.to_flat_phantom(cdp.pog)
-  mask = cdp.pog.ρ .!= 0
+  # mask = (cdp.pog.ρ .!= 0) .& ((cdp.jx .^ 2 + cdp.jy .^ 2 + cdp.jz .^ 2) .> 1e-9)
+  mask = (cdp.pog.ρ .!= 0) .& ((cdp.jx .^ 2 + cdp.jy .^ 2 + cdp.jz .^ 2) .> 0.0)
   colour_indicator = sum([cdp.jx[mask] .^ 2, cdp.jy[mask] .^ 2, cdp.jz[mask] .^ 2])
   fig = backend.Figure()
   ax = backend.Axis3(fig[1, 1])
-  backend.arrows!(flat.x, flat.y, flat.z, cdp.jx[mask], cdp.jy[mask], cdp.jz[mask],
+  backend.arrows!(flat.x[mask[:]], flat.y[mask[:]], flat.z[mask[:]],
+    cdp.jx[mask] * factor, cdp.jy[mask] * factor, cdp.jz[mask] * factor,
     arrowcolor=colour_indicator, linecolor=colour_indicator)
   return fig
 end
@@ -137,14 +139,14 @@ function reconstructCDPFromB(B1::FieldComponent, B2::FieldComponent, B3::FieldCo
   return CurrentDensityPhantom(pog, jx, jy, jz)
 end
 
-function plot_magnetic_field(cdp::CurrentDensityPhantom; backend=GLMakie)
+function plot_magnetic_field(cdp::CurrentDensityPhantom; backend=GLMakie, factor=1.0)
   flat = grid.to_flat_phantom(cdp.pog)
   mask = cdp.pog.ρ .!= 0
   B1, B2, B3 = calculate_magnetic_field(cdp)
   colour_indicator = sum([B1[mask] .^ 2, B2[mask] .^ 2, B3[mask] .^ 2])
   fig = backend.Figure()
   ax = backend.Axis3(fig[1, 1])
-  backend.arrows!(flat.x, flat.y, flat.z, B1[mask], B2[mask], B3[mask],
+  backend.arrows!(flat.x, flat.y, flat.z, B1[mask] * factor, B2[mask] * factor, B3[mask] * factor,
     arrowcolor=colour_indicator, linecolor=colour_indicator)
   return fig
 end
@@ -165,12 +167,6 @@ function from_flat(x::Vector{Float64}; B_shape, B_flat_size)
     reshape(x[2*B_flat_size+1:3*B_flat_size], B_shape),  # Bz
     reshape(x[3*B_flat_size+1:4*B_flat_size], B_shape)  # σ
   )
-end
-
-function amplify_j(cdp::CurrentDensityPhantom; factor=3.0)
-  cdp.jx .*= factor
-  cdp.jy .*= factor
-  cdp.jz .*= factor
 end
 
 function objective(Bx, By, Bz, σ; Bz0)
@@ -199,7 +195,7 @@ function find_matching_B(Bz0::FieldComponent)
   end
   # B1, B2, B3 = CDI.calculate_magnetic_field(CDI.generateDemoCDP())
   # @show f(to_flat(B1, B2, B3, ones(B_shape); B_flat_size))
-  result = Optim.optimize(f, x0, method=Optim.LBFGS(), iterations=15)
+  result = Optim.optimize(f, x0, method=Optim.LBFGS(), iterations=20)
   return result
 end
 
