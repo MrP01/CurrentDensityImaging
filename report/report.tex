@@ -36,6 +36,7 @@
 \makenoidxglossaries
 \newacronym{mri}{MRI}{Magnetic Resonance Imaging}
 \newacronym{mrt}{MRT}{Magnetic Resonance Tomography}
+\newacronym{mrcdi}{MRCDI}{Magnetic Resonance Current Density Imaging}
 \newacronym{fft}{FFT}{Fast Fourier Transform}
 \newacronym{ifft}{IFFT}{Inverse Fast Fourier Transform}
 \newacronym{cdi}{CDI}{Current Density Imaging}
@@ -70,6 +71,9 @@
   The project was split into two steps: First, simulating the magnetic field modulation given a current density field inside a \textit{phantom} (the \textit{forward} procedure).
   And second, reconstructing current density (including conductivity) using a novel optimisation model, based on measurements of the z-component of the magnetic field, with insight gained from the forward procedure (which, in turn is referred to as the \textit{backward} procedure).
 
+  The implementation was built on top of KomaMRI \parencite{2022-koma-mri} and is freely available on GitHub (\url{https://github.com/MrP01/CurrentDensityImaging}).
+  An exemplary reconstruction is documented in the results (\Cref{sec:results}).
+
   \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{../figures/komaui.png}
@@ -79,14 +83,22 @@
 
   \section{Introduction}
   The overall intention of \gls{mri} is to turn a source of contrast into an image for clinicians to use, mainly for the identification of different (potentially malignant) tissue types.
-  In the usual setting, this source of contrast is one of $T_1$, $T_2$ or $T_2^*$, three material constants.
+  In the usual setting, this source of contrast is one of the $T_1$, $T_2$ or $T_2^*$ material constants.
   Visualising these material properties in an image therefore allows to differentiate between different types of tissue visually.
 
-  \subsection{Mathematical Introduction to Magnetic Resonance Imaging}
+  \subsection{Brief Introduction to Magnetic Resonance Imaging}
+  What we image specifically are magnetic dipoles, also referred to as \textit{spins} in this context.
   The general equation governing the behaviour of these \textit{spin} objects is the Bloch equation:
   \begin{equation}
-    \frac{\dd \vec{M}}{\ddt} = \gamma (\vec{M} \times \vec{B}) - \frac{(M_z - M_0) \vec{e_z}}{T_1} - \frac{M_x \vec{e_x} + M_y \vec{e_y}}{T_2}\,.
+    \frac{\dd \vec{M}}{\ddt} = \gamma (\vec{M} \times \vec{B}) - \frac{(M_z - M_0) \vec{e_z}}{T_1} - \frac{M_x \vec{e_x} + M_y \vec{e_y}}{T_2}\,,
+    \label{eq:bloch}
   \end{equation}
+  where $\vec{M} = (M_x, M_y, M_z)^T \in \R^3$ is the magnetisation, $\vec{B} \in \R^3$ the magnetic field, $M_0 \in \R$ the equilibrium magnetisation, $T_1$ and $T_2 \in \R$ the (\textit{relaxation time}) material constants mentioned above and $t \in \R$ being time.
+
+  Starting from a certain \gls{mri} sequence controlling the gradient coils to excite spins inside the object of interest (individually governed by \Cref{eq:bloch}), the imaging process generally travels through a grid of points in $\vec{k}$-space (Fourier space) to later reconstruct an image slice from the inverse Fourier transform.
+  This procedure is repeated for every slice of the object until a full image is reconstructed (details may be found in \cite{1996-mri-basics}).
+
+  For the purposes of \gls{mrcdi}, the procedure also yields the z-component of the magnetic field $B_z = B_3 = \{\vec{B}\}_3$, which we will use for the reconstruction of current density $\vec{j}$.
 
   \subsection{The Biot-Savart Law}
   For a given current density $\vec{j}(t): \Omega \to \R^3$ \footnote{
@@ -116,14 +128,13 @@
   which provides an explicit expression for the magnetic field contribution $\vec{B}(\vec{x})$ at position $\vec{x} \in \Omega$ given a current density field $\vec{j}$.
 
   \subsection{Current Density Imaging}
+  Using a current source and attaching it to two electrodes connected to the object of interest, while reconstructing the image inside the \gls{mrt} tube, the \textit{imaging current} will induce a magnetic field modulation on top of the magnetic field inside the tube according to the Biot-Savart law, which we can measure (the $B_z$ component), cf. \cite{2004-mrcdi-from-one-var}.
+
+  As we only have access to one component of the magnetic field, the resulting system is underdetermined and we therefore need to solve an \textit{inverse problem}.
 
   \section{Methods}
   For visualisation and as a general framework, we built upon the \textbf{KomaMRI} toolchain and Julia software package \parencite{2022-koma-mri}.
-  This choice made sense because of its feature-richness and further extensibility.
-
-  \subsection{Gridded Data Format}
-  In order to use KomaMRI together with the \gls{fft}-based, we had to adapt the storage format.
-  % used .h5
+  This choice was made mostly due to Koma's feature-richness and extensibility, while harnessing the computational power of Julia \parencite{2017-julia}.
 
   \subsection{FFT-accelerated evaluation of the Biot-Savart law}
   Starting from the Biot-Savart law introduced above (cf. \Cref{eq:biot-savart}), we observe that splitting the cross-product ($\times$) into its three respective components
@@ -182,6 +193,12 @@ end
     \end{subfigure}
   \end{figure}
 
+  \subsection{Gridded Data Format}
+  In order to use KomaMRI together with the \gls{fft}-based evaluation of the Biot-Savart law on a phantom, we had to adapt the storage format from Koma's flattened vector storage of coordinates, density and other characteristic constants to a grid-based approach.
+  The flattened storage format allows for higher efficiency in terms of memory usage, especially for less dense phantoms.
+  However, some calculations on the data require neighbouring spins' characteristics in all six directions, for which a three-dimensional tensor storage format is more suitable, as it is provided in, for example, the JEMRIS file format (arrays are stored in \texttt{.h5} files).
+  This is especially true for the FFT, where data must be provided in gridded format.
+
   \subsection{The Optimisation Approach}
   \label{sec:optimisation-procedure}
   In order to be able to reconstruct the current density vector field $\vec{j}$ and conductivity scalar field $\sigma$, we employed the following optimisation model:
@@ -213,9 +230,11 @@ end
   Note the unit of the integral kernel: the numerator is the squared norm of the current density, therefore in \unit{\ampere\squared\per\meter^4}. Together with the corresponding denominator (\unit{\siemens\per\meter}), the integral kernel has units of \unit{\ampere\squared\ohm\per\meter^3}, becoming \unit{\ampere\squared\ohm}, which can be simplified to \unit{\volt\ampere}, which is a unit of \textbf{power} (\unit{\volt\ampere} = \unit{W}).
   This may be interpreted as a form of power dissipation outside of the domain and should therefore be minimised.
 
-  The iterates were produced using the Optim.jl optimisation library \parencite{2018-optim-jl}.
+  The iterates were produced using the Optim.jl optimisation library \parencite{2018-optim-jl} using the LBFGS routine \parencite{1989-lbfgs}.
 
   \section{Results}
+  \label{sec:results}
+  The optimisation converged after 25 LBFGS iterations, taking \SI{20}{\second} in total.
   \begin{figure}[H]
     \centering
     \begin{subfigure}[t]{0.48\textwidth}
@@ -253,6 +272,11 @@ end
   \end{figure}
 
   \subsection{Usage as a Julia Package}
+  The package provides two abstractions of Koma's \texttt{phantom} class:
+  \begin{enumerate}
+    \item \texttt{PhantomOnAGrid}, implementing the conversion and interfacing to the gridded data format.
+    \item \texttt{CurrentDensityPhantom}, extending \texttt{PhantomOnAGrid} with the current density vector field (each spatial component is stored in its own respective tensor).
+  \end{enumerate}
 
   \section{Future Perspectives}
   \subsection{Alternate Formulation and Splitting Method}
