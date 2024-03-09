@@ -183,6 +183,7 @@ end
   \end{figure}
 
   \subsection{The Optimisation Approach}
+  \label{sec:optimisation-procedure}
   In order to be able to reconstruct the current density vector field $\vec{j}$ and conductivity scalar field $\sigma$, we employed the following optimisation model:
   \begin{align*}
     \vec{B}^*, \sigma^* & = \argmin_{\vec{B}, \sigma} &  & \frac{1}{2} \int_\Omega \norm{\{\vec{B}\}_3 - B_3^0}^2 \,\dd\vec{x} + \frac{\alpha}{2} \int_\Omega \frac{\norm{\nabla \times \vec{B}(\vec{x})}^2}{\sigma(\vec{x})} \idd\vec{x} + R(\sigma) \\
@@ -205,7 +206,8 @@ end
   As a regulariser for the conductivity $\sigma$, we used the \gls{tv}, 1-norm of the gradient, of $\sigma$.
 
   Using Maxwell's second equation, one can obtain the corresponding current density $\vec{j}^*$ from Maxwell's fourth equation in the electrostatic case (\Cref{eq:maxwell-4-electrostatic}),
-  $$\vec{j}^* = \frac{1}{\mu_0} (\nabla \times \vec{B}^*)$$
+  $$\vec{j}^* = \frac{1}{\mu_0} (\nabla \times \vec{B}^*)\,,$$
+  where we evaluated the $\curl$ using the central finite difference.
 
   \paragraph{Dimensional Analysis}
   Note the unit of the integral kernel: the numerator is the squared norm of the current density, therefore in \unit{\ampere\squared\per\meter^4}. Together with the corresponding denominator (\unit{\siemens\per\meter}), the integral kernel has units of \unit{\ampere\squared\ohm\per\meter^3}, becoming \unit{\ampere\squared\ohm}, which can be simplified to \unit{\volt\ampere}, which is a unit of \textbf{power} (\unit{\volt\ampere} = \unit{W}).
@@ -214,6 +216,42 @@ end
   The iterates were produced using the Optim.jl optimisation library \parencite{2018-optim-jl}.
 
   \section{Results}
+  \begin{figure}[H]
+    \centering
+    \begin{subfigure}[t]{0.48\textwidth}
+      \centering
+      \includegraphics[width=\textwidth]{../figures/cdpr-j-field.pdf}
+      \caption{Exemplary current density field $\vec{j}(\vec{x})$ on a sample rectangular domain.}
+      \label{fig:cdpr-j-field}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.48\textwidth}
+      \centering
+      \includegraphics[width=\textwidth]{../figures/cdprr-j-field.pdf}
+      \caption{The \textit{reconstructed} current density field $\vec{j}^*(\vec{x})$ using the method described in \Cref{sec:optimisation-procedure}.}
+      \label{fig:cdprr-j-field}
+    \end{subfigure}
+  \end{figure}
+
+  % TODO: conductivity plot
+
+  \begin{figure}[H]
+    \centering
+    \begin{subfigure}[t]{0.48\textwidth}
+      \centering
+      \includegraphics[width=\textwidth]{../figures/cdpr-b-field.pdf}
+      \caption{Magnetic field corresponding to the current density field in \Cref{fig:cdpr-j-field}, as obtained through the Biot-Savart law.}
+      \label{fig:cdpr-b-field}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.48\textwidth}
+      \centering
+      \includegraphics[width=\textwidth]{../figures/cdprr-b-field.pdf}
+      \caption{Magnetic field corresponding to the \textit{reconstructed} current density \Cref{fig:cdprr-j-field}, as obtained through the Biot-Savart law.}
+      \label{fig:cdprr-b-field}
+    \end{subfigure}
+  \end{figure}
+
   \subsection{Usage as a Julia Package}
 
   \section{Future Perspectives}
@@ -232,4 +270,15 @@ end
   \pagebreak
   \printbibliography
   \printnoidxglossary[type=acronym, title={Acronyms}]
+
+  \appendix
+  \section{Appendix}
+  \begin{figure}[H]
+    \begin{subfigure}[t]{0.48\textwidth}
+      \centering
+      \includegraphics[width=\textwidth]{../figures/cdpbr-b-field.pdf}
+      \caption{Magnetic field obtained from the Biot-Savart procedure of the $\curl$ of the $\vec{B}$-field in \Cref{fig:demo-cdp-b-field}.}
+      \label{fig:cdpbr-b-field}
+    \end{subfigure}
+  \end{figure}
 \end{document}

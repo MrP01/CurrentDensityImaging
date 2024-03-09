@@ -193,18 +193,16 @@ function find_matching_B(Bz0::FieldComponent)
     Bx, By, Bz, σ = from_flat(x; B_shape, B_flat_size)
     return objective(Bx, By, Bz, σ; Bz0)
   end
-  # B1, B2, B3 = CDI.calculate_magnetic_field(CDI.generateDemoCDP())
-  # @show f(to_flat(B1, B2, B3, ones(B_shape); B_flat_size))
   result = Optim.optimize(f, x0, method=Optim.LBFGS(), iterations=20)
   return result
 end
 
-function solve(Bz0::FieldComponent)::CurrentDensityPhantom
+function solve(Bz0::FieldComponent)::Tuple{CurrentDensityPhantom,FieldComponent}
   result = find_matching_B(Bz0)
   @show result
   B_shape = size(Bz0)
   B_flat_size = prod(B_shape)
   B1, B2, B3, σ = CDI.from_flat(result.minimizer; B_shape, B_flat_size)
-  return reconstructCDPFromB(B1, B2, B3)
+  return reconstructCDPFromB(B1, B2, B3), σ
 end
 end
