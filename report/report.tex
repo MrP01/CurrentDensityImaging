@@ -284,8 +284,9 @@ end
 
   In order to install and try out the package, open up a Julia live interpreter and type:
   \begin{minted}{julia}
-    import https://github.com/MrP01/CurrentDensityImaging;
-    cdp = CDI.generateDemoCDP();  # generate exemplary current density phantom
+    import Pkg; Pkg.add(url="https://github.com/MrP01/CurrentDensityImaging");
+    import CurrentDensityImaging as CDI
+    cdp = CDI.generateDemoCDP()  # generate exemplary current density phantom
   \end{minted}
 
   \section{Future Perspectives}
