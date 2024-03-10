@@ -1,4 +1,4 @@
-module CDI
+module CurrentDensityImaging
 import KomaMRI
 import Lazy
 import LinearAlgebra
@@ -212,7 +212,7 @@ function find_matching_B(Bz0::FieldComponent)
     Bx, By, Bz, σ = from_flat(x; B_shape, B_flat_size)
     return objective(Bx, By, Bz, σ; Bz0)
   end
-  result = Optim.optimize(f, x0, method=Optim.LBFGS(), iterations=20)
+  result = Optim.optimize(f, x0, method=Optim.LBFGS(), iterations=40)
   return result
 end
 

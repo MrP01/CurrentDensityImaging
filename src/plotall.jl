@@ -1,4 +1,5 @@
-include("./CurrentDensityImaging.jl")
+include("./CurrentDensityImaging.jl");
+CDI = CurrentDensityImaging;
 import CairoMakie
 
 const RESULTS_FOLDER = joinpath(@__DIR__, "..", "figures")
