@@ -53,6 +53,7 @@ function plot_all()
   save_fig(fig, "cdpr-sigma"; throughEps=true)
 
   cdprr, σrr = CDI.solve(B3r)
+  # σrr = max.(σrr, 1.0)
   fig = CDI.plot_current_density(cdprr; backend=CairoMakie, factor=12.0)
   save_fig(fig, "cdprr-j-field"; throughEps=true)
   fig = CDI.plot_magnetic_field(cdprr; backend=CairoMakie, factor=2.6)

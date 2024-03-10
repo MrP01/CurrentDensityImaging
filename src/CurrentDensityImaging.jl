@@ -221,7 +221,7 @@ function solve(Bz0::FieldComponent)::Tuple{CurrentDensityPhantom,FieldComponent}
   @show result
   B_shape = size(Bz0)
   B_flat_size = prod(B_shape)
-  B1, B2, B3, σ = CDI.from_flat(result.minimizer; B_shape, B_flat_size)
+  B1, B2, B3, σ = from_flat(result.minimizer; B_shape, B_flat_size)
   return reconstructCDPFromB(B1, B2, B3), σ
 end
 end

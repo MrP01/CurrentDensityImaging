@@ -1,4 +1,4 @@
-\documentclass[12pt]{article}
+\documentclass[10pt]{article}
 \usepackage[en]{prettytex/base}
 \usepackage{prettytex/math}
 \usepackage{prettytex/code}
@@ -73,13 +73,6 @@
 
   The implementation was built on top of KomaMRI \parencite{2022-koma-mri} and is freely available on GitHub (\url{https://github.com/MrP01/CurrentDensityImaging}).
   An exemplary reconstruction is documented in the results (\Cref{sec:results}).
-
-  \begin{figure}[H]
-    \centering
-    \includegraphics[width=\linewidth]{../figures/komaui.png}
-    \caption{Koma UI}
-    \label{fig:komaui}
-  \end{figure}
 
   \section{Introduction}
   The overall intention of \gls{mri} is to turn a source of contrast into an image for clinicians to use, mainly for the identification of different (potentially malignant) tissue types.
@@ -194,6 +187,7 @@ end
       \caption{Magnetic field $\vec{B}(\vec{x})$ resulting from the homogeneous current density field depicted in \Cref{fig:demo-cdp-j-field}.}
       \label{fig:demo-cdp-b-field}
     \end{subfigure}
+    \caption{Current density field $\vec{j}$ and the corresponding magnetic field $\vec{B}$ as obtained using the Biot-Savart law.}
   \end{figure}
 
   \subsubsection{Gridded Data Format}
@@ -254,9 +248,26 @@ end
       \caption{The \textit{reconstructed} current density field $\vec{j}^*(\vec{x})$ using the method described in \Cref{sec:optimisation-procedure}.}
       \label{fig:cdprr-j-field}
     \end{subfigure}
+    \caption{Original current density field $\vec{j}$ (left) and its reconstruction $\vec{j}^*$ (right).}
   \end{figure}
 
-  % TODO: conductivity plot
+  \begin{figure}[H]
+    \centering
+    \begin{subfigure}[t]{0.48\textwidth}
+      \centering
+      \includegraphics[width=0.85\textwidth]{../figures/cdpr-sigma.pdf}
+      \caption{Conductivity $\sigma$ of the original, obtained as the best possible combination with $\vec{j}$ and $\vec{B}$ using the optimisation described in \Cref{sec:optimisation-procedure}.}
+      \label{fig:cdpr-sigma}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.48\textwidth}
+      \centering
+      \includegraphics[width=0.85\textwidth]{../figures/cdprr-sigma.pdf}
+      \caption{Reconstructed conductivity field $\sigma$, marking the solution of the optimisation problem together with \Cref{fig:cdprr-j-field,fig:cdprr-b-field}.}
+      \label{fig:cdprr-sigma}
+    \end{subfigure}
+    \caption{Original conductivity $\sigma$ (left) and its reconstruction $\sigma^*$ (right).}
+  \end{figure}
 
   \begin{figure}[H]
     \centering
@@ -273,6 +284,7 @@ end
       \caption{Magnetic field corresponding to the \textit{reconstructed} current density \Cref{fig:cdprr-j-field}, as obtained through the Biot-Savart law.}
       \label{fig:cdprr-b-field}
     \end{subfigure}
+    \caption{Original magnetic field $\vec{B}$ (left) and its reconstruction $\vec{B}^*$ (right).}
   \end{figure}
 
   \subsection{Usage as a Julia Package}
@@ -309,6 +321,13 @@ end
   \appendix
   \section{Appendix}
   The figures in this report were generated using Makie \parencite{2021-makie}.
+
+  \begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{../figures/komaui.png}
+    \caption{Koma UI}
+    \label{fig:komaui}
+  \end{figure}
 
   \begin{figure}[H]
     \begin{subfigure}[t]{0.48\textwidth}
