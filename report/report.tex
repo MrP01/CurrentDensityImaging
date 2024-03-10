@@ -302,7 +302,7 @@ end
   In order to install and try out the package, open up a Julia live interpreter and type:
   \begin{minted}{julia}
     import Pkg; Pkg.add(url="https://github.com/MrP01/CurrentDensityImaging");
-    import CurrentDensityImaging as CDI
+    import CurrentDensityImaging as CDI  # import the package
     cdp = CDI.generateDemoCDP()  # generate exemplary current density phantom
   \end{minted}
 
@@ -314,7 +314,7 @@ end
 
   The forward operator (FFT-accelerated evaluation of the Biot-Savart equation) can be invoked as follows:
   \begin{minted}{julia}
-    B1, B2, B3 = CDI.calculate_magnetic_field(cdp);
+    B1, B2, B3 = CDI.calculate_magnetic_field(cdp);  # obtain the x, y and z components of B
   \end{minted}
 
   A reconstruction from the z-component of the magnetic field $B_z$ can be obtained using
@@ -330,10 +330,12 @@ end
 
   As suggested by Prof. Bredies, one could approach the problem using an alternative model and optimisation routine, given in \Cref{sec:alt-formulation}.
 
+  \section*{Signatures}
+
   \vspace{4cm}
   \SignatureAndDate{(Peter Waldert)}
 
-  \vspace{2cm}
+  \vspace{3cm}
   \SignatureAndDate{(Prof. Kristian Bredies)}
 
   \pagebreak
