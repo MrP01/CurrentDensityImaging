@@ -161,6 +161,15 @@ function plot_magnetic_field(cdp::CurrentDensityPhantom; backend=GLMakie, factor
   return fig
 end
 
+function plot_conductivity(cdp::CurrentDensityPhantom, σ::FieldComponent; backend=GLMakie)
+  flat = grid.to_flat_phantom(cdp.pog)
+  mask = cdp.pog.ρ .!= 0
+  fig = backend.Figure()
+  ax = backend.Axis3(fig[1, 1], azimuth=0.3 * pi, elevation=0.06 * pi)
+  backend.scatter!(flat.x, flat.y, flat.z, color=σ[mask], markersize=20)
+  return fig
+end
+
 function to_flat(B1, B2, B3, σ; B_flat_size)::Vector{Float64}
   return [
     reshape(B1, (B_flat_size,))...,  # Bx
