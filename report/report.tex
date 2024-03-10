@@ -91,7 +91,7 @@
   Starting from a certain \gls{mri} sequence controlling the gradient coils to excite spins inside the object of interest (individually governed by \Cref{eq:bloch}), the imaging process generally travels through a grid of points in $\vec{k}$-space (Fourier space) to later reconstruct an image slice from the inverse Fourier transform.
   This procedure is repeated for every slice of the object until a full image is reconstructed (details may be found in \cite{1996-mri-basics}).
 
-  For the purposes of \gls{mrcdi}, the procedure also yields the z-component of the magnetic field $B_z = B_3 = \{\vec{B}\}_3$, which we will use for the reconstruction of current density $\vec{j}$.
+  For the purposes of \gls{mrcdi}, the procedure also yields the z-component of the magnetic field $B_z = B_3 = \{\vec{B}\}_3$, which we will use for the reconstruction of current density.
 
   \subsection{The Biot-Savart Law}
   For a given current density $\vec{j}(t): \Omega \to \R^3$ \footnote{
@@ -231,7 +231,9 @@ end
 
   \section{Results}
   \label{sec:results}
-  The optimisation converged after 25 LBFGS iterations, taking \SI{20}{\second} in total.
+  Starting from an exemplary current density phantom (cf. \Cref{fig:cdpr-j-field}), the reconstruction routine converges after 40 LBFGS iterations, taking \SI{20}{\second} in total.
+  The reconstructed current density may be found to its right, in \Cref{fig:cdprr-j-field}.
+  The corresponding reconstructed conductivity and magnetic field, along with their originals can be found in \Cref{fig:sigma,fig:b-field}.
 
   \begin{figure}[H]
     \centering
@@ -249,6 +251,7 @@ end
       \label{fig:cdprr-j-field}
     \end{subfigure}
     \caption{Original current density field $\vec{j}$ (left) and its reconstruction $\vec{j}^*$ (right).}
+    \label{fig:j-field}
   \end{figure}
 
   \begin{figure}[H]
@@ -267,6 +270,7 @@ end
       \label{fig:cdprr-sigma}
     \end{subfigure}
     \caption{Original conductivity $\sigma$ (left) and its reconstruction $\sigma^*$ (right).}
+    \label{fig:sigma}
   \end{figure}
 
   \begin{figure}[H]
@@ -285,6 +289,7 @@ end
       \label{fig:cdprr-b-field}
     \end{subfigure}
     \caption{Original magnetic field $\vec{B}$ (left) and its reconstruction $\vec{B}^*$ (right).}
+    \label{fig:b-field}
   \end{figure}
 
   \subsection{Usage as a Julia Package}
@@ -301,12 +306,29 @@ end
     cdp = CDI.generateDemoCDP()  # generate exemplary current density phantom
   \end{minted}
 
+  With the constructed current density phantom (\texttt{cdp}), one can generate plots for $\vec{j}$, $\vec{B}$ and $\sigma$ using
+  \texttt{CDI.plot\_current\_density},
+  \texttt{CDI.plot\_magnetic\_field} and
+  \texttt{CDI.plot\_conductivity}, respectively.
+  It is also possible to load a phantom in the JEMRIS format, for more information we refer the reader to the \href{https://github.com/MrP01/CurrentDensityImaging}{code repository}.
+
+  The forward operator (FFT-accelerated evaluation of the Biot-Savart equation) can be invoked as follows:
+  \begin{minted}{julia}
+    B1, B2, B3 = CDI.calculate_magnetic_field(cdp);
+  \end{minted}
+
+  A reconstruction from the z-component of the magnetic field $B_z$ can be obtained using
+  \begin{minted}{julia}
+    cdpr, sigmar = CDI.solve(B3);  # reconstruction of j and sigma
+  \end{minted}
+  where \texttt{cdpr} contains the reconstructed current density phantom and $\sigma$\texttt{r} is the reconstructed conductivity.
+
   \section{Future Perspectives}
-  \subsection{Alternate Formulation and Splitting Method}
-  As was suggested by Prof. Bredies, one could approach the problem using an alternative model and optimisation routine:
-  \begin{align*}
-    \vec{B}^*, \sigma^* & = \argmin_{\vec{B}, \sigma}
-  \end{align*}
+  \gls{mrcdi} is a promising approach toward the better diagnosis of pathologies in patients using imaging techniques.
+  The given model can be extended in various ways, for example one could modify the regularisation imposed on the conductivity, or add further terms to generally improve the reconstruction of $\vec{j}$.
+  It might also be possible to relax the divergence freeness condition in the optimisation procedure, by reducing redundancy in the optimised variable space.
+
+  As suggested by Prof. Bredies, one could approach the problem using an alternative model and optimisation routine, given in \Cref{sec:alt-formulation}.
 
   \vspace{4cm}
   \SignatureAndDate{(Peter Waldert)}
@@ -318,9 +340,16 @@ end
   \printbibliography
   \printnoidxglossary[type=acronym, title={Acronyms}]
 
+  \pagebreak
   \appendix
   \section{Appendix}
   The figures in this report were generated using Makie \parencite{2021-makie}.
+
+  \subsection{Alternate Formulation and Splitting Method}
+  \label{sec:alt-formulation}
+  \begin{align*}
+    \vec{B}^*, \sigma^* & = \argmin_{\vec{B}, \sigma}
+  \end{align*}
 
   \begin{figure}[H]
     \centering
