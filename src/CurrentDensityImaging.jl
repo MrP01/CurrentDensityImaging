@@ -194,7 +194,7 @@ function objective(Bx, By, Bz, σ; Bz0)
   power_dissipation = 1e-4 / 2 * sum((jx .^ 2 + jy .^ 2 + jz .^ 2) ./ σ)  # in units of power (Watt)
   dBx, dBy, dBz = centraldiff(Bx, dims=1), centraldiff(By, dims=2), centraldiff(Bz, dims=3)
   divergence_penalty = sum((dBx[:, 2:end-1, 2:end-1] + dBy[2:end-1, :, 2:end-1] + dBz[2:end-1, 2:end-1, :]) .^ 2)
-  σ_tv_regulariser = 1e-3 * (sum(centraldiff(σ, dims=1) .^ 2) + sum(centraldiff(σ, dims=2) .^ 2) + sum(centraldiff(σ, dims=3) .^ 2))
+  σ_tv_regulariser = 1e-3 * (sum(abs.(centraldiff(σ, dims=1))) + sum(abs.(centraldiff(σ, dims=2))) + sum(abs.(centraldiff(σ, dims=3))))
   # @show bz_match, power_dissipation, divergence_penalty, σ_tv_regulariser
   return bz_match + power_dissipation + divergence_penalty + σ_tv_regulariser
 end
