@@ -164,9 +164,10 @@ end
 function plot_conductivity(cdp::CurrentDensityPhantom, σ::FieldComponent; backend=GLMakie)
   flat = grid.to_flat_phantom(cdp.pog)
   mask = cdp.pog.ρ .!= 0
-  fig = backend.Figure()
+  fig = backend.Figure(size=(550, 300))
   ax = backend.Axis3(fig[1, 1], azimuth=0.3 * pi, elevation=0.04 * pi)
   backend.scatter!(flat.x, flat.y, flat.z, color=σ[mask], markersize=20)
+  backend.Colorbar(fig[1, 2], limits=(min(σ...), max(σ...)), colormap=:viridis, flipaxis=false, ticks=[min(σ...), max(σ...)], height=200)
   return fig
 end
 
