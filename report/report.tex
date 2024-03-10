@@ -41,6 +41,7 @@
 \newacronym{ifft}{IFFT}{Inverse Fast Fourier Transform}
 \newacronym{cdi}{CDI}{Current Density Imaging}
 \newacronym{tv}{TV}{Total Variation}
+\newacronym{ui}{UI}{User Interface}
 
 \addbibresource{../literature/sources.bib}
 
@@ -72,7 +73,7 @@
   And second, reconstructing current density (including conductivity) using a novel optimisation model, based on measurements of the z-component of the magnetic field, with insight gained from the forward procedure (which, in turn is referred to as the \textit{backward} procedure), cf. \Cref{sec:optimisation-procedure}.
 
   The implementation was built on top of KomaMRI \parencite{2022-koma-mri} and is freely available on GitHub (\url{https://github.com/MrP01/CurrentDensityImaging}).
-  An exemplary reconstruction is documented in the results (\Cref{sec:results}).
+  An exemplary reconstruction is documented in the results \Cref{sec:results}.
 
   \section{Introduction}
   The overall intention of \gls{mri} is to turn a source of contrast into an image for clinicians to use, mainly for the identification of different (potentially malignant) tissue types.
@@ -89,39 +90,39 @@
   where $\vec{M} = (M_x, M_y, M_z)^T \in \R^3$ is the magnetisation, $\vec{B} \in \R^3$ the magnetic field, $M_0 \in \R$ the equilibrium magnetisation, $T_1$ and $T_2 \in \R$ the (\textit{relaxation time}) material constants mentioned above and $t \in \R$ being time.
 
   Starting from a certain \gls{mri} sequence controlling the gradient coils to excite spins inside the object of interest (individually governed by \Cref{eq:bloch}), the imaging process generally travels through a grid of points in $\vec{k}$-space (Fourier space) to later reconstruct an image slice from the inverse Fourier transform.
-  This procedure is repeated for every slice of the object until a full image is reconstructed (details may be found in \cite{1996-mri-basics}).
+  This procedure is repeated for every slice of the object until a full image is reconstructed (cf. \cite{1996-mri-basics}).
 
   For the purposes of \gls{mrcdi}, the procedure also yields the z-component of the magnetic field $B_z = B_3 = \{\vec{B}\}_3$, which we will use for the reconstruction of current density.
 
   \subsection{The Biot-Savart Law}
-  For a given current density $\vec{j}(t): \Omega \to \R^3$ \footnote{
+  For a given current density $\vec{j}(t): \Omega \to \R^3$ (\footnote{
     The current density $\vec{j} = nq\vec{v}$, describing the flow of $n$ charges $q$ with velocity $\vec{v}$, may be related to \textit{current} $I$ through the infinitesimal $\vec{j} \idd^3\vec{x} = I \idd\vec{x}$.
-  } on a domain $\Omega \subseteq \R^3$ at time $t \in \R^+$, Maxwell's fourth equation in differential form
+  }) on a domain $\Omega \subseteq \R^3$ at time $t \in \R^+$, Maxwell's fourth equation in differential form
   \begin{equation*}
     \nabla \times \vec{B} = \mu_0 \left(\vec{j} + \epsilon_0 \frac{\partial \vec{E}}{\partial t}\right)\,,
     \label{eq:maxwell-4}
   \end{equation*}
   relates the curl of the magnetic field $\vec{B}(t): \Omega \to \R^3$ to the current density $\vec{j}(t)$ and the temporal rate of change in the \textit{electric} field $\vec{E}(t): \Omega \to \R^3$.
   $\epsilon_0$ and $\mu_0$ are the electric permittivity and magnetic permeability of free space, respectively.
-  The current density $\vec{j}$ is also connected to the electric field $\vec{E}$ through the, also position-dependent, electrical conductivity $\sigma: \Omega \to \R^+$
+  The current density $\vec{j}$ is also connected to the electric field $\vec{E}$ through the, also position-dependent, electrical conductivity $\sigma: \Omega \to \R^+$,
   $$\vec{j} = \sigma \vec{E}\,.$$
 
-  In the \textbf{electrostatic case} (when the electric field $\vec{E}$ is indepent of time $t$), the last term in the above equation will vanish and we arrive at
+  In the \textbf{electrostatic case} (when the electric field $\vec{E}$ is independent of time $t$), the last term in the above equation will vanish and we arrive at
   \begin{equation}
     \nabla \times \vec{B} = \mu_0 \vec{j}\,.
     \label{eq:maxwell-4-electrostatic}
   \end{equation}
-  This equation, together with the freedom of divergence of the magnetic field (Maxwell's second equation), $\nabla \cdot \vec{B} = 0$, leads to the \textbf{Biot-Savart law}
+  This equation, together with the freedom of divergence of the magnetic field (Maxwell's second equation), $\nabla \cdot \vec{B} = 0$, leads to the \textbf{Biot-Savart law},
   \begin{equation}
     \vec{B}(\vec{x})
     = \frac{\mu_0}{4\pi} \int_\Omega \frac{\vec{j}(\vec{y}) \times (\vec{x} - \vec{y})}{\norm{\vec{x} - \vec{y}}^3} \idd\vec{y}
-    = \frac{\mu_0}{4\pi} \int_\Omega \frac{\vec{j}(\vec{y}) \times \vec{y}}{\norm{\vec{y}}^3} \idd\vec{y}
+    = \frac{\mu_0}{4\pi} \int_\Omega \frac{\vec{j}(\vec{y}) \times \vec{y}}{\norm{\vec{y}}^3} \idd\vec{y}\,,
     \label{eq:biot-savart}
   \end{equation}
   which provides an explicit expression for the magnetic field contribution $\vec{B}(\vec{x})$ at position $\vec{x} \in \Omega$ given a current density field $\vec{j}$.
 
   \subsection{Current Density Imaging}
-  Using a current source and attaching it to two electrodes connected to the object of interest, while reconstructing the image inside the \gls{mrt} tube, the \textit{imaging current} will induce a magnetic field modulation on top of the magnetic field inside the tube according to the Biot-Savart law, which we can measure (the $B_z$ component), cf. \cite{2004-mrcdi-from-one-var}.
+  Using a current source and attaching it to two electrodes connected to the object of interest, while reconstructing the image inside the \gls{mrt} tube, the \textit{imaging current} will induce a magnetic field modulation on top of the magnetic field already present inside the tube according to the Biot-Savart law, which we can measure (the $B_z$ component), cf. \cite{2004-mrcdi-from-one-var}.
 
   As we only have access to one component of the magnetic field, the resulting system is underdetermined and we therefore need to solve an \textit{inverse problem}.
 
@@ -200,21 +201,21 @@ end
   \label{sec:optimisation-procedure}
   In order to be able to reconstruct the current density vector field $\vec{j}$ and conductivity scalar field $\sigma$, we employed the following optimisation model:
   \begin{align*}
-    \vec{B}^*, \sigma^* & = \argmin_{\vec{B}, \sigma} &  & \frac{1}{2} \int_\Omega \norm{\{\vec{B}\}_3 - B_3^0}^2 \,\dd\vec{x} + \frac{\alpha}{2} \int_\Omega \frac{\norm{\nabla \times \vec{B}(\vec{x})}^2}{\sigma(\vec{x})} \idd\vec{x} + R(\sigma) \\
-                        & \text{subject to}           &  & \nabla \cdot \vec{B} = \div \vec{B} = 0                                                                                                                                                    \\
-                        & \text{and}                  &  & \sigma \in [\sigma_0, \sigma_1]
+    \vec{B}^*, \sigma^* & = \argmin_{\vec{B}, \sigma} &  & \frac{1}{2} \int_\Omega \norm{\{\vec{B}\}_3 - B_3^0}^2 \,\dd\vec{x} + \frac{\alpha}{2} \int_\Omega \frac{\norm{\nabla \times \vec{B}(\vec{x})}^2}{\sigma(\vec{x})} \idd\vec{x} + R(\sigma)\,, \\
+                        & \text{subject to}           &  & \nabla \cdot \vec{B} = \div \vec{B} = 0\,,                                                                                                                                                    \\
+                        & \text{and}                  &  & \sigma \in [\sigma_0, \sigma_1]\,,
   \end{align*}
 
   One may include the constraint as a penalty term to the objective function:
   \begin{align*}
-    \int_\Omega \norm{\div \vec{B}(\vec{x})} \idd\vec{x} & = \int_\Omega \sqrt{\left(\frac{\partial B_1}{\partial x_1}\right)^2 + \left(\frac{\partial B_2}{\partial x_2}\right)^2 + \left(\frac{\partial B_3}{\partial x_3}\right)^2} \,\ddx_1\ddx_2\ddx_3    \\
-                                                         & \leq \int_\Omega \left(\left|\frac{\partial B_1}{\partial x_1}\right| + \left|\frac{\partial B_2}{\partial x_2}\right| + \left|\frac{\partial B_3}{\partial x_3}\right|\right) \,\ddx_1\ddx_2\ddx_3
+    \int_\Omega \norm{\div \vec{B}(\vec{x})} \idd\vec{x} & = \int_\Omega \sqrt{\left(\frac{\partial B_1}{\partial x_1}\right)^2 + \left(\frac{\partial B_2}{\partial x_2}\right)^2 + \left(\frac{\partial B_3}{\partial x_3}\right)^2} \,\ddx_1\ddx_2\ddx_3       \\
+                                                         & \leq \int_\Omega \left(\left|\frac{\partial B_1}{\partial x_1}\right| + \left|\frac{\partial B_2}{\partial x_2}\right| + \left|\frac{\partial B_3}{\partial x_3}\right|\right) \,\ddx_1\ddx_2\ddx_3\,.
   \end{align*}
 
-  Even better, we square
+  For better behaviour in the optimisation routine, we can use its square:
   \begin{align*}
-    p_{\rm div} & = \int_\Omega \norm{\div \vec{B}(\vec{x})}^2 \idd\vec{x} = \int_{\Omega} \norm{\nabla \cdot \vec{B}(x_1, x_2, x_3)}^2 \,\ddx_1\ddx_2\ddx_3                                                             \\
-                & = \int_\Omega \left(\left(\frac{\partial B_1}{\partial x_1}\right)^2 + \left(\frac{\partial B_2}{\partial x_2}\right)^2 + \left(\frac{\partial B_3}{\partial x_3}\right)^2\right) \,\ddx_1\ddx_2\ddx_3
+    p_{\rm div} & = \int_\Omega \norm{\div \vec{B}(\vec{x})}^2 \idd\vec{x} = \int_{\Omega} \norm{\nabla \cdot \vec{B}(x_1, x_2, x_3)}^2 \,\ddx_1\ddx_2\ddx_3                                                                \\
+                & = \int_\Omega \left(\left(\frac{\partial B_1}{\partial x_1}\right)^2 + \left(\frac{\partial B_2}{\partial x_2}\right)^2 + \left(\frac{\partial B_3}{\partial x_3}\right)^2\right) \,\ddx_1\ddx_2\ddx_3\,.
   \end{align*}
 
   As a regulariser for the conductivity $\sigma$, we used the \gls{tv}, 1-norm of the gradient, of $\sigma$.
@@ -350,18 +351,21 @@ end
   \subsection{Alternate Formulation and Splitting Method}
   \label{sec:alt-formulation}
   \begin{align*}
-    \vec{B}^*, \sigma^* & = \argmin_{\vec{B}, \sigma}
+    \vec{B}^*, \sigma^* & = \argmin_{\vec{B}, \sigma} \; \text{TODO}
   \end{align*}
 
+  \subsection{User Interface of KomaMRI}
   \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{../figures/komaui.png}
-    \caption{Koma UI}
+    \caption{The \gls{ui} packaged alongside Koma for users to explore the different functionality in a no-code environment. This interface can also be used to visualise results from the reconstruction mechanisms introduced in this report.}
     \label{fig:komaui}
   \end{figure}
 
+  \subsection{Reconstructed Magnetic Field}
   \begin{figure}[H]
-    \begin{subfigure}[t]{0.48\textwidth}
+    \centering
+    \begin{subfigure}[t]{0.6\textwidth}
       \centering
       \includegraphics[width=\textwidth]{../figures/cdpbr-b-field.pdf}
       \caption{Magnetic field obtained from the Biot-Savart procedure of the $\curl$ of the $\vec{B}$-field in \Cref{fig:demo-cdp-b-field}.}
