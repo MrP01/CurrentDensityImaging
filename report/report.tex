@@ -68,8 +68,8 @@
   \section{Summary}
   This lab rotation project was concerned with the development, exploration and implementation of a new optimisation approach for the reconstruction of current density / conductivity of tissue within a \gls{mri} setup.
 
-  The project was split into two steps: First, simulating the magnetic field modulation given a current density field inside a \textit{phantom} (the \textit{forward} procedure).
-  And second, reconstructing current density (including conductivity) using a novel optimisation model, based on measurements of the z-component of the magnetic field, with insight gained from the forward procedure (which, in turn is referred to as the \textit{backward} procedure).
+  The project was split into two steps: First, simulating the magnetic field modulation given a current density field inside a \textit{phantom} (the \textit{forward} procedure), cf. \Cref{sec:fft-biot}.
+  And second, reconstructing current density (including conductivity) using a novel optimisation model, based on measurements of the z-component of the magnetic field, with insight gained from the forward procedure (which, in turn is referred to as the \textit{backward} procedure), cf. \Cref{sec:optimisation-procedure}.
 
   The implementation was built on top of KomaMRI \parencite{2022-koma-mri} and is freely available on GitHub (\url{https://github.com/MrP01/CurrentDensityImaging}).
   An exemplary reconstruction is documented in the results (\Cref{sec:results}).
@@ -137,6 +137,7 @@
   This choice was made mostly due to Koma's feature-richness and extensibility, while harnessing the computational power of Julia \parencite{2017-julia}.
 
   \subsection{FFT-accelerated evaluation of the Biot-Savart law}
+  \label{sec:fft-biot}
   Starting from the Biot-Savart law introduced above (cf. \Cref{eq:biot-savart}), we observe that splitting the cross-product ($\times$) into its three respective components
   \begin{align*}
     B_1(\vec{x}) & = \frac{\mu_0}{4\pi} \int_{\Omega} \frac{j_2(\vec{y}) \cdot (x_3 - y_3) - j_3(\vec{y}) \cdot (x_2 - y_2)}{\norm{\vec{x} - \vec{y}}^3} \idd\vec{y} \,, \\
@@ -176,24 +177,26 @@ function calculate_magnetic_field(cdp::CurrentDensityPhantom)::VectorField
 end
   \end{minted}
 
+  For a homogeneous current density field as given in \Cref{fig:demo-cdp-j-field}, the resulting magnetic field looks as presented in \Cref{fig:demo-cdp-b-field}.
+
   \begin{figure}[H]
     \centering
     \begin{subfigure}[t]{0.48\textwidth}
       \centering
-      \includegraphics[width=\textwidth]{../figures/demo-cdp-j-field.pdf}
-      \caption{Exemplary uniform, homogeneous current density vector field $\vec{j}(\vec{x}) = {j}_0 \hat{\vec{e}}_z \mathds{1}_{\vec{x} \in \Omega_s}$ on a sample rectangular domain.}
+      \includegraphics[width=\textwidth]{../figures/homo-cdp-j-field.pdf}
+      \caption{Exemplary uniform, homogeneous current density vector field $\vec{j}(\vec{x}) = {j}_0 (-1, -1, 2)^T \mathds{1}_{\vec{x} \in \Omega_s}$ on a sample rectangular domain.}
       \label{fig:demo-cdp-j-field}
     \end{subfigure}
     \hfill
     \begin{subfigure}[t]{0.48\textwidth}
       \centering
-      \includegraphics[width=\textwidth]{../figures/demo-cdp-b-field.pdf}
+      \includegraphics[width=\textwidth]{../figures/homo-cdp-b-field.pdf}
       \caption{Magnetic field $\vec{B}(\vec{x})$ resulting from the homogeneous current density field depicted in \Cref{fig:demo-cdp-j-field}.}
       \label{fig:demo-cdp-b-field}
     \end{subfigure}
   \end{figure}
 
-  \subsection{Gridded Data Format}
+  \subsubsection{Gridded Data Format}
   In order to use KomaMRI together with the \gls{fft}-based evaluation of the Biot-Savart law on a phantom, we had to adapt the storage format from Koma's flattened vector storage of coordinates, density and other characteristic constants to a grid-based approach.
   The flattened storage format allows for higher efficiency in terms of memory usage, especially for less dense phantoms.
   However, some calculations on the data require neighbouring spins' characteristics in all six directions, for which a three-dimensional tensor storage format is more suitable, as it is provided in, for example, the JEMRIS file format (arrays are stored in \texttt{.h5} files).
@@ -223,8 +226,8 @@ end
   As a regulariser for the conductivity $\sigma$, we used the \gls{tv}, 1-norm of the gradient, of $\sigma$.
 
   Using Maxwell's second equation, one can obtain the corresponding current density $\vec{j}^*$ from Maxwell's fourth equation in the electrostatic case (\Cref{eq:maxwell-4-electrostatic}),
-  $$\vec{j}^* = \frac{1}{\mu_0} (\nabla \times \vec{B}^*)\,,$$
-  where we evaluated the $\curl$ using the central finite difference.
+  $$\vec{j}^* = \frac{1}{\mu_0} (\nabla \times \vec{B}^*) = \frac{1}{\mu_0} \curl(\vec{B}^*)\,,$$
+  where we evaluated the $\curl$ using a central finite difference scheme (setting boundary values to 0).
 
   \paragraph{Dimensional Analysis}
   Note the unit of the integral kernel: the numerator is the squared norm of the current density, therefore in \unit{\ampere\squared\per\meter^4}. Together with the corresponding denominator (\unit{\siemens\per\meter}), the integral kernel has units of \unit{\ampere\squared\ohm\per\meter^3}, becoming \unit{\ampere\squared\ohm}, which can be simplified to \unit{\volt\ampere}, which is a unit of \textbf{power} (\unit{\volt\ampere} = \unit{W}).
@@ -235,6 +238,7 @@ end
   \section{Results}
   \label{sec:results}
   The optimisation converged after 25 LBFGS iterations, taking \SI{20}{\second} in total.
+
   \begin{figure}[H]
     \centering
     \begin{subfigure}[t]{0.48\textwidth}
@@ -297,6 +301,8 @@ end
 
   \appendix
   \section{Appendix}
+  The figures in this report were generated using Makie \parencite{2021-makie}.
+
   \begin{figure}[H]
     \begin{subfigure}[t]{0.48\textwidth}
       \centering

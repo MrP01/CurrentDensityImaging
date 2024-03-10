@@ -21,6 +21,17 @@ end
 
 rtoi(x) = Int32(round(x))
 
+function generateDemoPOG(shape=(8, 8, 4))::grid.PhantomOnAGrid
+  sero = zeros(Float64, shape)
+  return grid.PhantomOnAGrid(name="demo phantom!", ρ=ones(shape), T1=sero, T2=sero, T2s=sero, Δw=sero, Δx=vec([1.0, 1.0, 1.0]), offset=vec([0, 0, 0]))
+end
+function convertToHomoCDP(pog::grid.PhantomOnAGrid)::CurrentDensityPhantom
+  shape = size(pog.ρ)
+  jz = zeros(Float64, shape)
+  jz[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= 0.2
+  jz .*= 1:shape[1]
+  return CurrentDensityPhantom(pog, zeros(Float64, shape), zeros(Float64, shape), jz)
+end
 function convertToDemoCDP(pog::grid.PhantomOnAGrid)::CurrentDensityPhantom
   shape = size(pog.ρ)
   jx = zeros(Float64, shape)
@@ -32,12 +43,11 @@ function convertToDemoCDP(pog::grid.PhantomOnAGrid)::CurrentDensityPhantom
   jz .*= 1:shape[1]
   return CurrentDensityPhantom(pog, jx, jy, jz)
 end
-function generateDemoPOG(shape=(8, 8, 4))::grid.PhantomOnAGrid
-  sero = zeros(Float64, shape)
-  return grid.PhantomOnAGrid(name="demo phantom!", ρ=ones(shape), T1=sero, T2=sero, T2s=sero, Δw=sero, Δx=vec([1.0, 1.0, 1.0]), offset=vec([0, 0, 0]))
-end
 function generateDemoCDP(shape=(8, 8, 4))::CurrentDensityPhantom
   return convertToDemoCDP(generateDemoPOG(shape))
+end
+function generateHomoCDP(shape=(8, 8, 4))::CurrentDensityPhantom
+  return convertToHomoCDP(generateDemoPOG(shape))
 end
 function loadBrainCDP()::CurrentDensityPhantom
   brain_h5 = joinpath(dirname(pathof(KomaMRI)), "../examples/2.phantoms/brain.h5")
@@ -176,7 +186,7 @@ function objective(Bx, By, Bz, σ; Bz0)
   dBx, dBy, dBz = centraldiff(Bx, dims=1), centraldiff(By, dims=2), centraldiff(Bz, dims=3)
   divergence_penalty = sum((dBx[:, 2:end-1, 2:end-1] + dBy[2:end-1, :, 2:end-1] + dBz[2:end-1, 2:end-1, :]) .^ 2)
   σ_tv_regulariser = 1e-3 * (sum(centraldiff(σ, dims=1) .^ 2) + sum(centraldiff(σ, dims=2) .^ 2) + sum(centraldiff(σ, dims=3) .^ 2))
-  @show bz_match, power_dissipation, divergence_penalty, σ_tv_regulariser
+  # @show bz_match, power_dissipation, divergence_penalty, σ_tv_regulariser
   return bz_match + power_dissipation + divergence_penalty + σ_tv_regulariser
 end
 
