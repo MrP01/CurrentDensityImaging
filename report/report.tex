@@ -77,7 +77,7 @@
 
   \section{Introduction}
   The overall intention of \gls{mri} is to turn a source of contrast into an image for clinicians to use, mainly for the identification of different (potentially malignant) tissue types.
-  In the usual setting, this source of contrast is one of the $T_1$, $T_2$ or $T_2^*$ material constants.
+  In the usual setting, this source of contrast is one of the $T_1$, $T_2$ or $T_2^*$ material constants of individual magnetic dipoles, such as water.
   Visualising these material properties in an image therefore allows to differentiate between different types of tissue visually.
 
   \subsection{Brief Introduction to Magnetic Resonance Imaging}
@@ -87,7 +87,8 @@
     \frac{\dd \vec{M}}{\ddt} = \gamma (\vec{M} \times \vec{B}) - \frac{(M_z - M_0) \vec{e_z}}{T_1} - \frac{M_x \vec{e_x} + M_y \vec{e_y}}{T_2}\,,
     \label{eq:bloch}
   \end{equation}
-  where $\vec{M} = (M_x, M_y, M_z)^T \in \R^3$ is the magnetisation, $\vec{B} \in \R^3$ the magnetic field, $M_0 \in \R$ the equilibrium magnetisation, $T_1$ and $T_2 \in \R$ the (\textit{relaxation time}) material constants mentioned above and $t \in \R$ being time.
+  where $\vec{M} = (M_x, M_y, M_z)^T \in \R^3$ is the magnetisation, $\vec{B} \in \R^3$ the magnetic field, $M_0 \in \R$ the equilibrium magnetisation, $\gamma$ the gyromagnetic ratio, $T_1$ and $T_2 \in \R$ the (\textit{relaxation time}) material constants mentioned above and $t \in \R$ being time (cf. \cite{1996-mri-basics}).
+  It describes the precession of the magnetisation $\vec{M}$ ``around'' the magnetic field $\vec{B}$.
 
   Starting from a certain \gls{mri} sequence controlling the gradient coils to excite spins inside the object of interest (individually governed by \Cref{eq:bloch}), the imaging process generally travels through a grid of points in $\vec{k}$-space (Fourier space) to later reconstruct an image slice from the inverse Fourier transform.
   This procedure is repeated for every slice of the object until a full image is reconstructed (cf. \cite{1996-mri-basics}).
@@ -97,13 +98,13 @@
   \subsection{The Biot-Savart Law}
   For a given current density $\vec{j}(t): \Omega \to \R^3$ (\footnote{
     The current density $\vec{j} = nq\vec{v}$, describing the flow of $n$ charges $q$ with velocity $\vec{v}$, may be related to \textit{current} $I$ through the infinitesimal $\vec{j} \idd^3\vec{x} = I \idd\vec{x}$.
-  }) on a domain $\Omega \subseteq \R^3$ at time $t \in \R^+$, Maxwell's fourth equation in differential form
+  }) on a domain $\Omega \subseteq \R^3$ at time $t \in \R^+$, Maxwell's fourth equation in differential form,
   \begin{equation*}
     \nabla \times \vec{B} = \mu_0 \left(\vec{j} + \epsilon_0 \frac{\partial \vec{E}}{\partial t}\right)\,,
     \label{eq:maxwell-4}
   \end{equation*}
   relates the curl of the magnetic field $\vec{B}(t): \Omega \to \R^3$ to the current density $\vec{j}(t)$ and the temporal rate of change in the \textit{electric} field $\vec{E}(t): \Omega \to \R^3$.
-  $\epsilon_0$ and $\mu_0$ are the electric permittivity and magnetic permeability of free space, respectively.
+  The constants $\epsilon_0$ and $\mu_0$ are the electric permittivity and magnetic permeability of free space, respectively.
   The current density $\vec{j}$ is also connected to the electric field $\vec{E}$ through the, also position-dependent, electrical conductivity $\sigma: \Omega \to \R^+$,
   $$\vec{j} = \sigma \vec{E}\,.$$
 
@@ -144,8 +145,8 @@
 
   Using the convolution theorem for two functions $f$ and $g$
   $$\mathcal{F}[f * g](\vec{k}) = \mathcal{F}[f](\vec{k}) \cdot \mathcal{F}[g](\vec{k}) \quad\text{where}\quad \mathcal{F}[f](\vec{k}) := \int f(\vec{x}) \e^{-\i \vec{k} \vec{x}}\idd\vec{x}\,,$$
-  (for more information, we refer the reader to \cite{2022-convolution-theorem}), the respective convolution integrals may be evaluated ``much faster'' using the \gls{fft} and \glstext{ifft}.
-  More precisely, this speedup is due to the computational complexity cost reduction from $\mathcal{O}(n^2)$ to $\mathcal{O}(n \log n)$. % TODO
+  the respective convolution integrals may be evaluated more computationally efficient using the \gls{fft} and \glstext{ifft} (for more information on this relationship, we refer the reader to \cite{2022-convolution-theorem}).
+  More precisely, this speedup is due to the computational complexity cost reduction from $\mathcal{O}(n^2)$ when evaluating the Biot-Savart law conventionally to $\mathcal{O}(n \log n)$ when using the \gls{fft}, where $n$ would model the number of voxels the system operates on.
 
   The first component of the magnetic field $B_1 = \{\vec{B}\}_1$ may then be expressed as
   $$B_1(\vec{x}) = \frac{\mu_0}{4\pi}\mathcal{F}^{-1}\left[\mathcal{F}(j_2) \cdot \mathcal{F}(g_3) - \mathcal{F}(j_3) \cdot \mathcal{F}(g_2)\right](\vec{x})\,,$$
@@ -157,12 +158,6 @@
 
   In code, this may be implemented like so:
   \begin{minted}{julia}
-cross(a1, a2, a3, b1, b2, b3) = (
-  a2 .* b3 - a3 .* b2,
-  -(a1 .* b3 - a3 .* b1),
-  a1 .* b2 - a2 .* b1
-)
-
 function calculate_magnetic_field(cdp::CurrentDensityPhantom)::VectorField
   # [obtain M_range, calculate g1, g2, g3 on the entire frequency domain]
   c1, c2, c3 = cross(fft(pad_jx), fft(pad_jy), fft(pad_jz), g1, g2, g3)
@@ -178,14 +173,14 @@ end
     \begin{subfigure}[t]{0.48\textwidth}
       \centering
       \includegraphics[width=\textwidth]{../figures/homo-cdp-j-field.pdf}
-      \caption{Exemplary uniform, homogeneous current density vector field $\vec{j}(\vec{x}) = {j}_0 (-1, -1, 2)^T \mathds{1}_{\vec{x} \in \Omega_s}$ on a sample rectangular domain.}
+      \caption{Exemplary current density vector field $\vec{j}(\vec{x}) = {j}_0 (-1, -1, 2)^T \mathds{1}_{\vec{x} \in \Omega_s}$ on a sample rectangular domain.}
       \label{fig:demo-cdp-j-field}
     \end{subfigure}
     \hfill
     \begin{subfigure}[t]{0.48\textwidth}
       \centering
       \includegraphics[width=\textwidth]{../figures/homo-cdp-b-field.pdf}
-      \caption{Magnetic field $\vec{B}(\vec{x})$ resulting from the homogeneous current density field depicted in \Cref{fig:demo-cdp-j-field}.}
+      \caption{Magnetic field $\vec{B}(\vec{x})$ resulting from the current density field depicted in \Cref{fig:demo-cdp-j-field}.}
       \label{fig:demo-cdp-b-field}
     \end{subfigure}
     \caption{Current density field $\vec{j}$ and the corresponding magnetic field $\vec{B}$ as obtained using the Biot-Savart law.}
@@ -226,7 +221,7 @@ end
 
   \paragraph{Dimensional Analysis}
   Note the unit of the integral kernel: the numerator is the squared norm of the current density, therefore in \unit{\ampere\squared\per\meter^4}. Together with the corresponding denominator (\unit{\siemens\per\meter}), the integral kernel has units of \unit{\ampere\squared\ohm\per\meter^3}, becoming \unit{\ampere\squared\ohm}, which can be simplified to \unit{\volt\ampere}, which is a unit of \textbf{power} (\unit{\volt\ampere} = \unit{W}).
-  This may be interpreted as a form of power dissipation outside of the domain and should therefore be minimised.
+  The entire term may then be interpreted as a form of power dissipation and should therefore be minimised.
 
   The iterates were produced using the Optim.jl optimisation library \parencite{2018-optim-jl} using the LBFGS routine \parencite{1989-lbfgs}.
 
@@ -292,6 +287,10 @@ end
     \caption{Original magnetic field $\vec{B}$ (left) and its reconstruction $\vec{B}^*$ (right).}
     \label{fig:b-field}
   \end{figure}
+
+  Within the scope of this initial exploration, the reconstructed current density matches the phantom well, along with the conductivity and associated magnetic field (the actual variables of the optimisation routine).
+  Further experiments (which this report is too short to contain) suggest it extends well to other current density fields, as long as they are solenoidal (divergence free).
+  Starting from a general vector field, its solenoidal part may be obtained using the Helmholtz decomposition, as long as it decays rapidly enough towards the boundaries of the domain.
 
   \subsection{Usage as a Julia Package}
   The package provides two abstractions of Koma's \texttt{phantom} class:
