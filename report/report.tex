@@ -173,7 +173,7 @@ end
     \begin{subfigure}[t]{0.48\textwidth}
       \centering
       \includegraphics[width=\textwidth]{../figures/homo-cdp-j-field.pdf}
-      \caption{Exemplary current density vector field $\vec{j}(\vec{x}) = {j}_0 (-1, -1, 2)^T \mathds{1}_{\vec{x} \in \Omega_s}$ on a sample rectangular domain.}
+      \caption{Exemplary current density vector field $\vec{j}(\vec{x}) = {j}_0 (-1, -1, 2 x_1)^T \mathds{1}_{\vec{x} \in \Omega_s}$ on a sample rectangular domain.}
       \label{fig:demo-cdp-j-field}
     \end{subfigure}
     \hfill
@@ -306,7 +306,7 @@ end
     cdp = CDI.generateDemoCDP()  # generate exemplary current density phantom
   \end{minted}
 
-  With the constructed current density phantom (\texttt{cdp}), one can generate plots for $\vec{j}$, $\vec{B}$ and $\sigma$ using
+  With the constructed current density phantom (\texttt{cdp}), one can generate plots for $\vec{j}$, $\vec{B}$ and $\sigma$ using \\
   \texttt{CDI.plot\_current\_density},
   \texttt{CDI.plot\_magnetic\_field} and
   \texttt{CDI.plot\_conductivity}, respectively.
