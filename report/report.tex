@@ -92,6 +92,7 @@
   \end{equation}
   where $\vec{M} = (M_1, M_2, M_3)^T \in \R^3$ is the magnetisation, $\vec{B} \in \R^3$ the magnetic field, $M_0 \in \R$ the equilibrium magnetisation, $\gamma$ the gyromagnetic ratio, $T_1$ and $T_2 \in \R$ the (\textit{relaxation time}) material constants mentioned above and $t \in \R$ being time (cf. \cite{1996-mri-basics}).
   It describes the precession of the magnetisation $\vec{M}$ ``around'' the magnetic field $\vec{B}$.
+  Supplied with the appropriate initial condition (e.g. $\vec{M}(t=t_0) = \vec{M}_{t_0}$), this system can be solved explicitly.
 
   Starting from a certain \gls{mri} sequence controlling the gradient coils to excite spins inside the object of interest (individually governed by \Cref{eq:bloch}), the imaging process generally travels through a grid of points in $\vec{k}$-space (Fourier space) to later reconstruct an image slice using the inverse Fourier transform.
   This procedure is repeated for every slice of the object until a full image is reconstructed (cf. \cite{1996-mri-basics}).
@@ -100,7 +101,7 @@
 
   \subsection{The Biot-Savart Law}
   For a given current density $\vec{j}(t): \Omega \to \R^3$ (\footnote{
-    The current density satisfies $\vec{j} = nq\vec{v}$, describing the flow of $n$ charges $q$ with velocity $\vec{v}$, it is therefore the amount of current $I$ flowing through an infinitesimal area $A$, motivating its notation as a \textit{density}.
+    The current density $\vec{j} = nq\vec{v}$ describes the flow of $n$ charges $q$ with velocity $\vec{v}$, it is therefore the amount of current $I$ flowing through an infinitesimal area $A$, motivating its notation as a \textit{density}.
   }) in $\R^3$, with $\Omega \subseteq \R^3$ denoting the region of interest, at time $t \in \R^+$, Maxwell's fourth equation in differential form,
   \begin{equation*}
     \nabla \times \vec{B} = \mu_0 \left(\vec{j} + \epsilon_0 \frac{\partial \vec{E}}{\partial t}\right)\,,
@@ -190,7 +191,7 @@ end
   \end{figure}
 
   \subsubsection{Gridded Data Format}
-  In order to use KomaMRI together with the \gls{fft}-based evaluation of the Biot-Savart law on a phantom, we had to adapt the storage format from Koma's flattened vector storage of coordinates, density and other characteristic constants to a grid-based approach.
+  In order to use KomaMRI together with the \gls{fft}-based evaluation of the Biot-Savart law (described above) on a phantom, we had to adapt the storage format from Koma's flattened vector storage of coordinates, density and other characteristic constants to a grid-based approach.
   The flattened storage format allows for higher efficiency in terms of memory usage, especially for less dense phantoms.
   However, some calculations on the data require neighbouring spins' characteristics in all six directions, for which a three-dimensional tensor storage format is more suitable, as it is provided in, for example, the JEMRIS file format (arrays are stored in \texttt{.h5} files).
   This is especially true for the FFT, where data must be provided in gridded format.
