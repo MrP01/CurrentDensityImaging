@@ -45,6 +45,7 @@
 
 \addbibresource{../literature/sources.bib}
 
+\newcommand{\onenorm}[1]{\left\lVert#1\right\rVert_{\scriptscriptstyle 1}}
 \renewcommand{\norm}[1]{\left\lVert#1\right\rVert_{\scriptscriptstyle 2}}
 \newcommand{\hatvec}[1]{\vec{\hat{#1}}}
 
@@ -196,27 +197,22 @@ end
   \label{sec:optimisation-procedure}
   In order to be able to reconstruct the current density vector field $\vec{j}$ and conductivity scalar field $\sigma$, we employed the following optimisation model:
   \begin{align*}
-    \vec{B}^*, \sigma^* & = \argmin_{\vec{B}, \sigma} &  & \frac{1}{2} \int_\Omega \norm{\{\vec{B}\}_3 - B_3^0}^2 \,\dd\vec{x} + \frac{\alpha}{2} \int_\Omega \frac{\norm{\nabla \times \vec{B}(\vec{x})}^2}{\sigma(\vec{x})} \idd\vec{x} + R(\sigma)\,, \\
-                        & \text{subject to}           &  & \nabla \cdot \vec{B} = \div \vec{B} = 0\,,                                                                                                                                                    \\
-                        & \text{and}                  &  & \sigma \in [\sigma_0, \sigma_1]\,,
+    \vec{B}^*, \sigma^* & := \argmin_{\vec{B}, \sigma} &  & \frac{1}{2} \int_\Omega \norm{\{\vec{B}\}_3 - B_3^0}^2 \,\dd\vec{x} + \frac{\alpha}{2} \int_\Omega \frac{\norm{\nabla \times \vec{B}(\vec{x})}^2}{\sigma(\vec{x})} \idd\vec{x} + R(\sigma)\,, \\
+                        & \text{subject to}            &  & \nabla \cdot \vec{B} = \div \vec{B} = 0\,,                                                                                                                                                    \\
+                        & \text{and}                   &  & \sigma \in [\sigma_0, \sigma_1]\,,
   \end{align*}
 
-  One may include the constraint as a penalty term to the objective function:
+  As a regulariser $R$ for the conductivity $\sigma$, we used the \gls{tv}, 1-norm of the gradient, of $\sigma$:
+  $$R(\sigma) := \beta \int_\Omega \onenorm{\grad \sigma(\vec{x})} \idd\vec{x} = \beta \int_\Omega \left(\left|\frac{\partial \sigma}{\partial x_1}\right| + \left|\frac{\partial \sigma}{\partial x_2}\right| + \left|\frac{\partial \sigma}{\partial x_3}\right|\right) \,\ddx_1\ddx_2\ddx_3$$
+
+  One can include the divergence constraint as a penalty term to the objective function:
   \begin{align*}
-    \int_\Omega \norm{\div \vec{B}(\vec{x})} \idd\vec{x} & = \int_\Omega \sqrt{\left(\frac{\partial B_1}{\partial x_1}\right)^2 + \left(\frac{\partial B_2}{\partial x_2}\right)^2 + \left(\frac{\partial B_3}{\partial x_3}\right)^2} \,\ddx_1\ddx_2\ddx_3       \\
-                                                         & \leq \int_\Omega \left(\left|\frac{\partial B_1}{\partial x_1}\right| + \left|\frac{\partial B_2}{\partial x_2}\right| + \left|\frac{\partial B_3}{\partial x_3}\right|\right) \,\ddx_1\ddx_2\ddx_3\,.
+    p_{\rm div} := \gamma \int_\Omega |\div \vec{B}(\vec{x})|^2 \idd\vec{x} & = \gamma \int_\Omega \left|\frac{\partial B_1}{\partial x_1} + \frac{\partial B_2}{\partial x_2} + \frac{\partial B_3}{\partial x_3}\right|^2 \,\ddx_1\ddx_2\ddx_3
   \end{align*}
-
-  For better behaviour in the optimisation routine, we can use its square:
-  \begin{align*}
-    p_{\rm div} & = \int_\Omega \norm{\div \vec{B}(\vec{x})}^2 \idd\vec{x} = \int_{\Omega} \norm{\nabla \cdot \vec{B}(x_1, x_2, x_3)}^2 \,\ddx_1\ddx_2\ddx_3                                                                \\
-                & = \int_\Omega \left(\left(\frac{\partial B_1}{\partial x_1}\right)^2 + \left(\frac{\partial B_2}{\partial x_2}\right)^2 + \left(\frac{\partial B_3}{\partial x_3}\right)^2\right) \,\ddx_1\ddx_2\ddx_3\,.
-  \end{align*}
-
-  As a regulariser $R(\sigma)$ for the conductivity $\sigma$, we used the \gls{tv}, 1-norm of the gradient, of $\sigma$.
+  with $\gamma \in \R^+$ sufficiently large.
 
   Using Maxwell's second equation, one can obtain the corresponding current density $\vec{j}^*$ from Maxwell's fourth equation in the electrostatic case (\Cref{eq:maxwell-4-electrostatic}),
-  $$\vec{j}^* = \frac{1}{\mu_0} (\nabla \times \vec{B}^*) = \frac{1}{\mu_0} \curl(\vec{B}^*)\,,$$
+  $$\vec{j}^* := \frac{1}{\mu_0} (\nabla \times \vec{B}^*) = \frac{1}{\mu_0} \curl(\vec{B}^*)\,,$$
   where we evaluated the $\curl$ using a central finite difference scheme (setting boundary values to 0).
 
   \paragraph{Dimensional Analysis}
@@ -310,7 +306,7 @@ end
   \texttt{CDI.plot\_current\_density},
   \texttt{CDI.plot\_magnetic\_field} and
   \texttt{CDI.plot\_conductivity}, respectively.
-  It is also possible to load a phantom in the JEMRIS format, for more information we refer the reader to the \href{https://github.com/MrP01/CurrentDensityImaging}{code repository}.
+  It is also possible to load a phantom in the JEMRIS format, for more information we refer the reader to the \href{https://github.com/MrP01/CurrentDensityImaging}{code repository}, specifically the \texttt{src/grid.jl} file.
 
   The forward operator (FFT-accelerated evaluation of the Biot-Savart equation) can be invoked as follows:
   \begin{minted}{julia}
