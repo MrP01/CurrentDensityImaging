@@ -143,7 +143,7 @@
   \end{align*}
   according to the explicit representation of the cross-product in three spatial dimensions, most notably allows us to express $B_1$, $B_2$ and $B_3$ as convolution integrals with $g_1, g_2, g_3: \Omega \to \R$,
   $$B_1(\vec{x}) = \frac{\mu_0}{4\pi} \int_{\Omega} \big[j_2(\vec{y}) g_3(\vec{x} - \vec{y}) - j_3(\vec{y}) g_2(\vec{x} - \vec{y})\big]\idd\vec{y} = \frac{\mu_0}{4\pi} \big[(j_2 *_{\Omega} g_3) - (j_3 *_{\Omega} g_2)\big](\vec{x})\,,$$
-  $$\text{where}\quad g_1(\vec{x}) := \sfrac{\vec{x}_1}{\norm{\vec{x}}^3}, \quad g_2(\vec{x}) := \sfrac{\vec{x}_2}{\norm{\vec{x}}^3}, \quad\text{and}\quad g_3(\vec{x}) := \sfrac{\vec{x}_3}{\norm{\vec{x}}^3}$$
+  $$\text{where}\quad g_1(\vec{x}) := \sfrac{\vec{x}_1}{\norm{\vec{x}}^3}, \quad g_2(\vec{x}) := \sfrac{\vec{x}_2}{\norm{\vec{x}}^3} \quad\text{and}\quad g_3(\vec{x}) := \sfrac{\vec{x}_3}{\norm{\vec{x}}^3}$$
   and the respective analogs for $B_2$ and $B_3$ \parencite{2020-biot-savart-evaluation-fft}.
 
   Using the convolution theorem for two functions $f$ and $g$
@@ -169,7 +169,7 @@ function calculate_magnetic_field(cdp::CurrentDensityPhantom)::VectorField
 end
   \end{minted}
 
-  For a homogeneous current density field as given in \Cref{fig:demo-cdp-j-field}, the resulting magnetic field looks as presented in \Cref{fig:demo-cdp-b-field}.
+  For a current density field as given in \Cref{fig:demo-cdp-j-field}, the resulting $\vec{B}$ field looks as presented in \Cref{fig:demo-cdp-b-field}.
 
   \begin{figure}[H]
     \centering
@@ -211,7 +211,7 @@ end
   \begin{align*}
     p_{\rm div} := \gamma \int_\Omega |\div \vec{B}(\vec{x})|^2 \idd\vec{x} & = \gamma \int_\Omega \left|\frac{\partial B_1}{\partial x_1} + \frac{\partial B_2}{\partial x_2} + \frac{\partial B_3}{\partial x_3}\right|^2 \,\ddx_1\ddx_2\ddx_3
   \end{align*}
-  with $\gamma \in \R^+$ sufficiently large.
+  with all constants $\alpha, \beta, \gamma \in \R^+$ sufficiently large.
 
   Using Maxwell's second equation, one can obtain the corresponding current density $\vec{j}^*$ from Maxwell's fourth equation in the electrostatic case (\Cref{eq:maxwell-4-electrostatic}),
   $$\vec{j}^* := \frac{1}{\mu_0} (\nabla \times \vec{B}^*) = \frac{1}{\mu_0} \curl(\vec{B}^*)\,,$$

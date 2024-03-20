@@ -25,13 +25,13 @@ end
 function plot_all()
   CairoMakie.activate!()
 
-  cdp = CDI.generateDemoCDP((16, 16, 4))
+  cdp = CDI.generateDemoCDP()
   fig = CDI.plot_current_density(cdp; backend=CairoMakie)
   save_fig(fig, "demo-cdp-j-field"; throughEps=true)
   fig = CDI.plot_magnetic_field(cdp; backend=CairoMakie, factor=0.1)
   save_fig(fig, "demo-cdp-b-field"; throughEps=true)
 
-  cdp = CDI.generateHomoCDP((16, 16, 6))
+  cdp = CDI.generateHomoCDP()
   fig = CDI.plot_current_density(cdp; backend=CairoMakie)
   save_fig(fig, "homo-cdp-j-field"; throughEps=true)
   fig = CDI.plot_magnetic_field(cdp; backend=CairoMakie, factor=0.1)

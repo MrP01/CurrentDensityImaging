@@ -63,6 +63,9 @@ function plot_current_density(cdp::CurrentDensityPhantom; backend=GLMakie, facto
   colour_indicator = sum([cdp.jx[mask] .^ 2, cdp.jy[mask] .^ 2, cdp.jz[mask] .^ 2])
   fig = backend.Figure()
   ax = backend.Axis3(fig[1, 1])
+  f = 1.10
+  backend.limits!(ax, min(flat.x...) * f, max(flat.x...) * f, min(flat.y...) * f, max(flat.y...) * f,
+    min(flat.z...) * f, max(flat.z...) * f)
   backend.arrows!(flat.x[mask[:]], flat.y[mask[:]], flat.z[mask[:]],
     cdp.jx[mask] * factor, cdp.jy[mask] * factor, cdp.jz[mask] * factor,
     arrowcolor=colour_indicator, linecolor=colour_indicator)
