@@ -45,6 +45,7 @@
 
 \addbibresource{../literature/sources.bib}
 
+\newcommand{\sfrac}[2]{{#1 / #2}}
 \newcommand{\onenorm}[1]{\left\lVert#1\right\rVert_{\scriptscriptstyle 1}}
 \renewcommand{\norm}[1]{\left\lVert#1\right\rVert_{\scriptscriptstyle 2}}
 \newcommand{\hatvec}[1]{\vec{\hat{#1}}}
@@ -100,7 +101,7 @@
   \subsection{The Biot-Savart Law}
   For a given current density $\vec{j}(t): \Omega \to \R^3$ (\footnote{
     The current density satisfies $\vec{j} = nq\vec{v}$, describing the flow of $n$ charges $q$ with velocity $\vec{v}$, it is therefore the amount of current $I$ flowing through an infinitesimal area $A$, motivating its notation as a \textit{density}.
-  }) on a domain $\Omega \subseteq \R^3$ at time $t \in \R^+$, Maxwell's fourth equation in differential form,
+  }) in $\R^3$, with $\Omega \subseteq \R^3$ denoting the region of interest, at time $t \in \R^+$, Maxwell's fourth equation in differential form,
   \begin{equation*}
     \nabla \times \vec{B} = \mu_0 \left(\vec{j} + \epsilon_0 \frac{\partial \vec{E}}{\partial t}\right)\,,
     \label{eq:maxwell-4}
@@ -140,12 +141,13 @@
     B_2(\vec{x}) & = \frac{\mu_0}{4\pi} \int_{\Omega} \frac{j_3(\vec{y}) \cdot (x_1 - y_1) - j_1(\vec{y}) \cdot (x_3 - y_3)}{\norm{\vec{x} - \vec{y}}^3} \idd\vec{y} \,, \\
     B_3(\vec{x}) & = \frac{\mu_0}{4\pi} \int_{\Omega} \frac{j_1(\vec{y}) \cdot (x_2 - y_2) - j_2(\vec{y}) \cdot (x_1 - y_1)}{\norm{\vec{x} - \vec{y}}^3} \idd\vec{y} \,,
   \end{align*}
-  according to the explicit representation of the cross-product in three spatial dimensions, most notably allows us to express $B_1$, $B_2$ and $B_3$ as convolution integrals
+  according to the explicit representation of the cross-product in three spatial dimensions, most notably allows us to express $B_1$, $B_2$ and $B_3$ as convolution integrals with $g_1, g_2, g_3: \Omega \to \R$,
   $$B_1(\vec{x}) = \frac{\mu_0}{4\pi} \int_{\Omega} \big[j_2(\vec{y}) g_3(\vec{x} - \vec{y}) - j_3(\vec{y}) g_2(\vec{x} - \vec{y})\big]\idd\vec{y} = \frac{\mu_0}{4\pi} \big[(j_2 *_{\Omega} g_3) - (j_3 *_{\Omega} g_2)\big](\vec{x})\,,$$
-  with $g_1, g_2, g_3: \Omega \to \R$, $g_1(\vec{x}) = \frac{\vec{x}_1}{\norm{\vec{x}}^3}$, $g_2(\vec{x}) = \frac{\vec{x}_2}{\norm{\vec{x}}^3}$ and $g_3(\vec{x}) = \frac{\vec{x}_3}{\norm{\vec{x}}^3}$ and the respective analogs for $B_2$ and $B_3$ \parencite{2020-biot-savart-evaluation-fft}.
+  $$\text{where}\quad g_1(\vec{x}) := \sfrac{\vec{x}_1}{\norm{\vec{x}}^3}, \quad g_2(\vec{x}) := \sfrac{\vec{x}_2}{\norm{\vec{x}}^3}, \quad\text{and}\quad g_3(\vec{x}) := \sfrac{\vec{x}_3}{\norm{\vec{x}}^3}$$
+  and the respective analogs for $B_2$ and $B_3$ \parencite{2020-biot-savart-evaluation-fft}.
 
   Using the convolution theorem for two functions $f$ and $g$
-  $$\mathcal{F}[f * g](\vec{k}) = \mathcal{F}[f](\vec{k}) \cdot \mathcal{F}[g](\vec{k}) \quad\text{where}\quad \mathcal{F}[f](\vec{k}) := \int f(\vec{x}) \e^{-\i \vec{k}^T \vec{x}}\idd\vec{x}\,,$$
+  $$\mathcal{F}[f * g](\vec{k}) = \mathcal{F}[f](\vec{k}) \cdot \mathcal{F}[g](\vec{k}) \quad\text{where}\quad \mathcal{F}[f](\vec{k}) := \int_{\R^3} f(\vec{x}) \e^{-\i \vec{k}^T \vec{x}}\idd\vec{x}\,,$$
   the respective convolution integrals may be evaluated computationally efficiently using the \gls{fft} and \glstext{ifft} (for details on this relationship, we refer the reader to \cite{2022-convolution-theorem}).
   More precisely, this speedup is due to the computational complexity cost reduction from $\mathcal{O}(n^2)$ when evaluating the Biot-Savart law conventionally to $\mathcal{O}(n \log n)$ when using the \gls{fft}, where $n$ would model the number of voxels the system operates on.
 
@@ -216,7 +218,7 @@ end
   where we evaluated the $\curl$ using a central finite difference scheme (setting boundary values to 0).
 
   \paragraph{Dimensional Analysis}
-  Note the unit of the integral kernel: the numerator is the squared norm of the current density, therefore in \unit{\ampere\squared\per\meter^4}. Together with the corresponding denominator (\unit{\siemens\per\meter}), the integral kernel has units of \unit{\ampere\squared\ohm\per\meter^3}, becoming \unit{\ampere\squared\ohm}, which can be simplified to \unit{\volt\ampere}, which is a unit of \textbf{power} (\unit{\volt\ampere} = \unit{W}).
+  In the objective function, note the unit of the integral kernel $\sfrac{\norm{\nabla \times \vec{B}(\vec{x})}^2}{\sigma(\vec{x})}$: the numerator is the squared norm of the current density, therefore in \unit{\ampere\squared\per\meter^4}. Together with the corresponding denominator (in units of \unit{\siemens\per\meter}), the integral kernel has units of \unit{\ampere\squared\ohm\per\meter^3}, becoming \unit{\ampere\squared\ohm}, which can be simplified to \unit{\volt\ampere}, which is a unit of \textbf{power} (\unit{\volt\ampere} = \unit{W}).
   The entire term may then be interpreted as a form of power dissipation and should therefore be minimised.
 
   The iterates were produced using the Optim.jl optimisation library \parencite{2018-optim-jl} using the LBFGS routine \parencite{1989-lbfgs}.
