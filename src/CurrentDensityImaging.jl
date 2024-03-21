@@ -37,10 +37,10 @@ function convertToDemoCDP(pog::grid.PhantomOnAGrid)::CurrentDensityPhantom
   jx = zeros(Float64, shape)
   jy = zeros(Float64, shape)
   jz = zeros(Float64, shape)
-  jx[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= -0.3
-  jy[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= -0.3
-  jz[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= 0.4
-  jz .*= 1:shape[1]
+  jx[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= 0.4
+  # jy[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= -0.3
+  # jz[rtoi(shape[1] / 3):rtoi(shape[1] * 2 / 3), rtoi(shape[2] / 3):rtoi(shape[2] * 2 / 3), :] .= 0.4
+  # jz .*= 1:shape[1]
   return CurrentDensityPhantom(pog, jx, jy, jz)
 end
 function generateDemoCDP(shape=(8, 8, 4))::CurrentDensityPhantom
@@ -170,7 +170,9 @@ function plot_conductivity(cdp::CurrentDensityPhantom, σ::FieldComponent; backe
   fig = backend.Figure(size=(550, 300))
   ax = backend.Axis3(fig[1, 1], azimuth=0.3 * pi, elevation=0.04 * pi)
   backend.scatter!(flat.x, flat.y, flat.z, color=σ[mask], markersize=15)
-  backend.Colorbar(fig[1, 2], limits=(min(σ...), max(σ...)), colormap=:viridis, flipaxis=false, ticks=[min(σ...), max(σ...)], height=200)
+  # tickformat(values) = ["$(value:.5f)" for value in values]
+  backend.Colorbar(fig[1, 2], limits=(min(σ...), max(σ...)), colormap=:viridis, flipaxis=false,
+    ticks=[min(σ...), max(σ...)], tickformat="{:.5f}", height=200)
   return fig
 end
 
@@ -192,13 +194,14 @@ function from_flat(x::Vector{Float64}; B_shape, B_flat_size)
   )
 end
 
+TV_factor = 5e-4
 function objective(Bx, By, Bz, σ; Bz0)
   jx, jy, jz = curl(Bx, By, Bz)
   bz_match = 1e3 * sum((Bz - Bz0) .^ 2) / 2
   power_dissipation = 1e-4 / 2 * sum((jx .^ 2 + jy .^ 2 + jz .^ 2) ./ σ)  # in units of power (Watt)
   dBx, dBy, dBz = centraldiff(Bx, dims=1), centraldiff(By, dims=2), centraldiff(Bz, dims=3)
   divergence_penalty = sum((dBx[:, 2:end-1, 2:end-1] + dBy[2:end-1, :, 2:end-1] + dBz[2:end-1, 2:end-1, :]) .^ 2)
-  σ_tv_regulariser = 1e-3 * (sum(abs.(centraldiff(σ, dims=1))) + sum(abs.(centraldiff(σ, dims=2))) + sum(abs.(centraldiff(σ, dims=3))))
+  σ_tv_regulariser = TV_factor * (sum(abs.(centraldiff(σ, dims=1))) + sum(abs.(centraldiff(σ, dims=2))) + sum(abs.(centraldiff(σ, dims=3))))
   # @show bz_match, power_dissipation, divergence_penalty, σ_tv_regulariser
   return bz_match + power_dissipation + divergence_penalty + σ_tv_regulariser
 end

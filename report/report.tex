@@ -177,7 +177,7 @@ end
     \begin{subfigure}[t]{0.48\textwidth}
       \centering
       \includegraphics[width=\textwidth]{../figures/homo-cdp-j-field.pdf}
-      \caption{Exemplary current density vector field $\vec{j}(\vec{x}) = {j}_0 (-1, -1, 2 x_1)^T \mathds{1}_{\vec{x} \in \Omega_s}$ on a sample rectangular domain.}
+      \caption{Current density $\vec{j}(\vec{x}) = {j}_0 (-1, -1, 2 x_1)^T \mathds{1}_{\vec{x} \in \Omega_s}$ on a sample rectangular domain.}
       \label{fig:demo-cdp-j-field}
     \end{subfigure}
     \hfill
@@ -213,6 +213,7 @@ end
     p_{\rm div} := \gamma \int_\Omega |\div \vec{B}(\vec{x})|^2 \idd\vec{x} & = \gamma \int_\Omega \left|\frac{\partial B_1}{\partial x_1} + \frac{\partial B_2}{\partial x_2} + \frac{\partial B_3}{\partial x_3}\right|^2 \,\ddx_1\ddx_2\ddx_3
   \end{align*}
   with all constants $\alpha, \beta, \gamma \in \R^+$ sufficiently large.
+  Both the divergence and gradient were implemented using a numerical central difference scheme.
 
   Using Maxwell's second equation, one can obtain the corresponding current density $\vec{j}^*$ from Maxwell's fourth equation in the electrostatic case (\Cref{eq:maxwell-4-electrostatic}),
   $$\vec{j}^* := \frac{1}{\mu_0} (\nabla \times \vec{B}^*) = \frac{1}{\mu_0} \curl(\vec{B}^*)\,,$$
