@@ -58,8 +58,7 @@ end
 Lazy.@forward CurrentDensityPhantom.pog KomaMRI.plot_phantom_map
 function plot_current_density(cdp::CurrentDensityPhantom; backend=GLMakie, factor=1.0)
   flat = grid.to_flat_phantom(cdp.pog)
-  # mask = (cdp.pog.ρ .!= 0) .& ((cdp.jx .^ 2 + cdp.jy .^ 2 + cdp.jz .^ 2) .> 1e-9)
-  mask = (cdp.pog.ρ .!= 0) .& ((cdp.jx .^ 2 + cdp.jy .^ 2 + cdp.jz .^ 2) .> 0.0)
+  mask = (cdp.pog.ρ .!= 0) .& ((cdp.jx .^ 2 + cdp.jy .^ 2 + cdp.jz .^ 2) .> 1e-8)
   colour_indicator = sum([cdp.jx[mask] .^ 2, cdp.jy[mask] .^ 2, cdp.jz[mask] .^ 2])
   fig = backend.Figure()
   ax = backend.Axis3(fig[1, 1])

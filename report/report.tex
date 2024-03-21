@@ -288,7 +288,9 @@ end
     \label{fig:b-field}
   \end{figure}
 
-  Within the scope of this initial exploration, the reconstructed current density matches the phantom well, along with the conductivity and associated magnetic field (the actual variables of the optimisation routine).
+  Within the scope of this initial exploration, the current density reconstruction \emph{from only the z-component of the magnetic field} matches the phantom well, along with the conductivity and associated magnetic field (the actual variables of the optimisation routine).
+  The reconstructed conductivity also aligns well with its original, varying only slightly in magnitude while retaining most spatial features.
+
   Further experiments (which this report is too short to contain) suggest it extends well to other current density fields, as long as they are solenoidal (divergence free).
   Starting from a general vector field, its solenoidal part may be obtained using the Helmholtz decomposition, as long as it decays rapidly enough towards the boundaries of the domain.
 
