@@ -148,7 +148,7 @@
   and the respective analogs for $B_2$ and $B_3$ \parencite{2020-biot-savart-evaluation-fft}.
 
   Using the convolution theorem for two functions $f$ and $g$
-  $$\mathcal{F}[f * g](\vec{k}) = \mathcal{F}[f](\vec{k}) \cdot \mathcal{F}[g](\vec{k}) \quad\text{where}\quad \mathcal{F}[f](\vec{k}) := \int_{\R^3} f(\vec{x}) \e^{-\i \vec{k}^T \vec{x}}\idd\vec{x}\,,$$
+  $$\mathcal{F}[f * g](\vec{k}) = \mathcal{F}[f](\vec{k}) \cdot \mathcal{F}[g](\vec{k}) \quad\text{where}\quad \mathcal{F}[f](\vec{k}) := \int_{\R^3} f(\vec{x}) \e^{-\i \vec{k}^* \vec{x}}\idd\vec{x}\,,$$
   the respective convolution integrals may be evaluated computationally efficiently using the \gls{fft} and \glstext{ifft} (for details on this relationship, we refer the reader to \cite{2022-convolution-theorem}).
   More precisely, this speedup is due to the computational complexity cost reduction from $\mathcal{O}(n^2)$ when evaluating the Biot-Savart law conventionally to $\mathcal{O}(n \log n)$ when using the \gls{fft}, where $n$ would model the number of voxels the system operates on.
 
@@ -295,7 +295,7 @@ end
   Starting from a general vector field, its solenoidal part may be obtained using the Helmholtz decomposition, as long as it decays rapidly enough towards the boundaries of the domain.
 
   \subsection{Usage as a Julia Package}
-  The package provided alongside this report offers two abstractions of Koma's \texttt{phantom} class:
+  The \texttt{CurrentDensityImaging} package provided alongside this report offers two abstractions of KomaMRI's \texttt{Phantom} class, for the following purposes:
   \begin{enumerate}
     \item \texttt{PhantomOnAGrid}, implementing the conversion and interfacing to the gridded data format.
     \item \texttt{CurrentDensityPhantom}, extending \texttt{PhantomOnAGrid} with the current density vector field (each spatial component is stored in its own respective tensor).
@@ -348,13 +348,9 @@ end
   \pagebreak
   \appendix
   \section{Appendix}
+  For completeness, the following provides a screenshot of the user interface that can be used in conjunction with our package.
+  Further, the lower plot shows how the magnetic field looks after one cycle through the forward procedure.
   The figures in this report were generated using Makie \parencite{2021-makie}.
-
-  % \subsection{Alternate Formulation and Splitting Method}
-  % \label{sec:alt-formulation}
-  % \begin{align*}
-  %   \vec{B}^*, \sigma^* & = \argmin_{\vec{B}, \sigma} \; \text{TODO}
-  % \end{align*}
 
   \subsection{User Interface of KomaMRI}
   \begin{figure}[H]
@@ -364,11 +360,11 @@ end
     \label{fig:komaui}
   \end{figure}
 
-  \subsection{Reconstructed Magnetic Field}
+  \subsection{Magnetic Field Reconstruction From Curl}
   \begin{figure}[H]
     \centering
-    \includegraphics[width=0.6\textwidth]{../figures/cdpbr-b-field.pdf}
-    \caption{Magnetic field obtained from the Biot-Savart procedure of the $\curl$ of the $\vec{B}$-field in \Cref{fig:demo-cdp-b-field}.}
+    \includegraphics[width=0.58\textwidth]{../figures/cdpbr-b-field.pdf}
+    \caption{Magnetic field obtained from the Biot-Savart procedure of the $\curl$ of the $\vec{B}$-field in \Cref{fig:demo-cdp-b-field}. This represents one cycle through the forward procedure, cf. \Cref{sec:fft-biot}.}
     \label{fig:cdpbr-b-field}
   \end{figure}
 \end{document}
